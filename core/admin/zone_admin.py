@@ -1,16 +1,7 @@
 from django.contrib import admin
-from django.shortcuts import redirect, render
-from django.urls import path
-from django.contrib import messages
 from django.utils.html import format_html
-from django.db.models import Q, Count, Avg, F
-from django.utils import timezone
 
-from core.models import User, Region, Zone, Car, FuelRecord, SystemLog
-from core.admin_actions import export_action
-from core.services.car_service import CarService
-from core.services.export_service import ExportService
-from core.services.region_service import RegionService
+from core.models import Zone, Car
 
 
 @admin.register(Zone)
