@@ -1,0 +1,102 @@
+{% extends "admin/base_site.html" %}
+{% load i18n %}
+
+{% block content %}
+<div class="container">
+    <h1>📦 Подтверждение архивации регионов</h1>
+    
+    <div class="alert alert-warning">
+        <strong>Внимание!</strong> Вы собираетесь архивировать следующие регионы:
+    </div>
+    
+    <div class="card">
+        <div class="card-header">
+            <strong>Регионы для архивации ({{ total_regions }} шт.):</strong>
+        </div>
+        <div class="card-body">
+            <ul>
+                {% for region in regions %}
+                <li>{{ region.name }}{% if region.short_name %} ({{ region.short_name }}){% endif %}</li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+    
+    <div class="alert alert-info mt-3">
+        <strong>Примечание:</strong> Будут архивированы только регионы без активных автомобилей.
+    </div>
+    
+    <form method="post" class="mt-4">
+        {% csrf_token %}
+        <div class="form-group">
+            <button type="submit" class="btn btn-danger btn-lg">
+                ✅ Подтвердить архивацию {{ total_regions }} регионов
+            </button>
+            <a href="../" class="btn btn-secondary btn-lg ml-2">❌ Отмена</a>
+        </div>
+    </form>
+</div>
+
+<style>
+.container {
+    max-width: 800px;
+    margin: 20px auto;
+    padding: 20px;
+}
+.alert {
+    padding: 15px;
+    margin-bottom: 20px;
+    border: 1px solid transparent;
+    border-radius: 4px;
+}
+.alert-warning {
+    color: #856404;
+    background-color: #fff3cd;
+    border-color: #ffeaa7;
+}
+.alert-info {
+    color: #0c5460;
+    background-color: #d1ecf1;
+    border-color: #bee5eb;
+}
+.card {
+    margin-bottom: 20px;
+}
+.card-header {
+    padding: 10px 15px;
+    background-color: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+}
+.card-body {
+    padding: 15px;
+}
+.btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-block;
+}
+.btn-danger {
+    background-color: #dc3545;
+    color: white;
+}
+.btn-secondary {
+    background-color: #6c757d;
+    color: white;
+}
+.btn-lg {
+    font-size: 16px;
+}
+.mt-3 {
+    margin-top: 15px;
+}
+.mt-4 {
+    margin-top: 20px;
+}
+.ml-2 {
+    margin-left: 10px;
+}
+</style>
+{% endblock %}

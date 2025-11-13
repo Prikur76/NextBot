@@ -1,0 +1,39 @@
+{% extends "web/base.html" %}
+{% block title %}Добавить заправку{% endblock %}
+{% block content %}
+<h3 class="mb-4">Добавить заправку</h3>
+<form method="post" class="card p-4 shadow-sm bg-white">
+    {% csrf_token %}
+    <div class="mb-3">
+        <label for="car" class="form-label">Автомобиль</label>
+        <select name="car" id="car" class="form-select" required>
+            <option value="">— Выберите автомобиль —</option>
+            {% for car in cars %}
+            <option value="{{ car.id }}">{{ car.state_number }} — {{ car.model }}</option>
+            {% endfor %}
+        </select>
+    </div>
+
+    <div class="mb-3">
+        <label for="liters" class="form-label">Количество литров</label>
+        <input type="number" step="0.01" min="0" name="liters" id="liters" class="form-control" required>
+    </div>
+
+    <div class="mb-3">
+        <label class="form-label">Источник</label>
+        <select name="source" class="form-select">
+            <option value="TGBOT">Телеграм-бот</option>
+            <option value="CARD">Топливная карта</option>
+            <option value="TRUCK">Топливозаправщик</option>
+        </select>
+    </div>
+
+    <button type="submit" class="btn btn-success">💾 Сохранить</button>
+    <p></p>
+    <a href="/" class="btn btn-outline-secondary">Назад</a>
+</form>
+
+{% for message in messages %}
+<div class="alert alert-{{ message.tags }} mt-3">{{ message }}</div>
+{% endfor %}
+{% endblock %}

@@ -1,0 +1,36 @@
+{% extends "web/base.html" %}
+{% block title %}Отчёты{% endblock %}
+{% block content %}
+<h3 class="mb-4">📋 Отчёты по заправкам</h3>
+
+{% if records %}
+<table class="table table-striped align-middle">
+    <thead>
+        <tr>
+            <th>Дата</th>
+            <th>Автомобиль</th>
+            <th>Литры</th>
+            <th>Вид топлива</th>
+            <th>Сотрудник</th>
+            <th>Способ</th>
+        </tr>
+    </thead>
+    <tbody>
+        {% for record in records %}
+        <tr>
+            <td>{{ record.filled_at|date:"d.m.Y H:i" }}</td>
+            <td>{{ record.state_number }}</td>
+            <td>{{ record.liters }}</td>
+            <td>{{ record.fuel_type }}</td>
+            <td>{{ record.employee }}</td>
+            <td>{{ record.source }}</td>
+        </tr>
+        {% endfor %}
+    </tbody>
+</table>
+{% else %}
+<div class="alert alert-info">Нет доступных записей.</div>
+{% endif %}
+
+<a href="/" class="btn btn-outline-secondary">← Назад</a>
+{% endblock %}
