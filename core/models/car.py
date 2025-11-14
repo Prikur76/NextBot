@@ -1,7 +1,6 @@
-from datetime import datetime, timedelta
+from datetime import timedelta
 from django.db import models
 from django.db.models import Q, Count, Avg, Sum, QuerySet, ExpressionWrapper, FloatField, Max, Min
-from django.db.models.functions import ExtractYear
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 
@@ -346,15 +345,13 @@ class Car(models.Model):
         self.status = "АРХИВ"
         self.is_active = False
         self.save(update_fields=['status', 'is_active', 'updated_at'])
-        print(f"📦 Автомобиль {self.code} перемещен в архив: {reason}")
-    
+        
     def restore_from_archive(self):
         """Восстановление автомобиля из архива"""
         self.status = "АКТИВЕН"
         self.is_active = True
         self.save(update_fields=['status', 'is_active', 'updated_at'])
-        print(f"🔄 Автомобиль {self.code} восстановлен из архива")
-    
+            
     def safe_delete(self):
         """Безопасное удаление - перевод в архив вместо физического удаления"""
         self.archive("Безопасное удаление")

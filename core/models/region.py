@@ -83,13 +83,11 @@ class Region(models.Model):
         
         self.active = False
         self.save(update_fields=['active'])
-        print(f"📦 Регион {self.name} архивирован: {reason}")
-
+        
     def restore(self):
         """Восстановление региона из архива"""
         self.active = True
         self.save(update_fields=['active'])
-        print(f"🔄 Регион {self.name} восстановлен из архива")
 
     def get_cars_statistics(self):
         """Статистика по автомобилям региона"""
