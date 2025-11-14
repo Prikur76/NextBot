@@ -11,6 +11,27 @@ from core.services.car_service import CarService
 from core.services.export_service import ExportService
 
 
+class CarArchiveFilter(admin.SimpleListFilter):
+    title = 'Статус архивации'
+    parameter_name = 'archive_status'
+    
+    def lookups(self, request, model_admin):
+        return [
+            ('archived', 'Архивированные'),
+            ('active', 'Активные'),
+            ('all', 'Все'),
+        ]
+    
+    def queryset(self, request, queryset):
+        if self.value() == 'archived':
+            return queryset.archived()
+        elif self.value() == 'active':
+            return queryset.active()
+        elif self.value() == 'all':
+            return queryset.all()
+        return queryset.active()
+    
+
 @admin.register(Car)
 class CarAdmin(admin.ModelAdmin):
     list_display = (
@@ -19,6 +40,7 @@ class CarAdmin(admin.ModelAdmin):
         "car_age", "status_display", "is_active_display",  "created_at"
     )
     list_filter = (
+        CarArchiveFilter,
         "is_active", "region", "department", 
         "manufacture_year", "created_at"
     )
@@ -33,8 +55,7 @@ class CarAdmin(admin.ModelAdmin):
     actions = [
         "export_selected_cars", 
         "archive_selected", 
-        "activate_selected", 
-        "find_duplicates_action"
+        "activate_selected"
     ]
     
     # Автодополнение для улучшения производительности
@@ -178,7 +199,7 @@ class CarAdmin(admin.ModelAdmin):
             return "АКТИВЕН"
         
     # Кастомные действия
-    @admin.action(description="Архивировать")
+    @admin.action(description="📦 Архивировать")
     def archive_selected(self, request, queryset):
         """Архивировать выбранные автомобили"""
         car_ids = list(queryset.values_list('id', flat=True))
@@ -194,7 +215,7 @@ class CarAdmin(admin.ModelAdmin):
             messages.SUCCESS
         )
     
-    @admin.action(description="Восстановить")    
+    @admin.action(description="🔄 Восстановить")    
     def activate_selected(self, request, queryset):
         """Активировать выбранные автомобили"""
         activated_count = 0
@@ -208,43 +229,11 @@ class CarAdmin(admin.ModelAdmin):
             f'Активировано {activated_count} автомобилей',
             messages.SUCCESS
         )
-        
-    @admin.action(description="Поиск дубликатов")
-    def find_duplicates_action(self, request, queryset):
-        """Найти дубликаты среди выбранных автомобилей"""
-        car_ids = list(queryset.values_list('id', flat=True))
-        duplicates_info = []
-        
-        # Проверяем дубликаты госномеров
-        state_duplicates = Car.objects.filter(
-            id__in=car_ids
-        ).values('state_number').annotate(
-            count=Count('id')
-        ).filter(count__gt=1)
-        
-        for dup in state_duplicates:
-            duplicates_info.append(f"Госномер {dup['state_number']}: {dup['count']} шт.")
-        
-        # Проверяем дубликаты VIN
-        vin_duplicates = Car.objects.filter(
-            id__in=car_ids
-        ).exclude(vin='').values('vin').annotate(
-            count=Count('id')
-        ).filter(count__gt=1)
-        
-        for dup in vin_duplicates:
-            duplicates_info.append(f"VIN {dup['vin']}: {dup['count']} шт.")
-        
-        if duplicates_info:
-            message = "Найдены дубликаты:\n" + "\n".join(duplicates_info)
-            self.message_user(request, message, messages.WARNING)
-        else:
-            self.message_user(request, "Дубликатов не найдено", messages.INFO)
-     
+    
     @export_action(
         export_method='export_selected_cars',
         filename_prefix='selected_cars',
-        description='Экспорт выбранных (Excel)'
+        description='📥 Экспорт (Excel)'
     )
     def export_selected_cars(self, request, queryset):
         """Экспорт выбранных автомобилей"""
@@ -349,8 +338,8 @@ class CarAdmin(admin.ModelAdmin):
     def get_queryset(self, request):
         qs = super().get_queryset(request)
         # Показываем архивные только если явно отфильтровано
-        if 'is_active' not in request.GET and 'status' not in request.GET:
-            qs = qs.active()
+        # if 'is_active' not in request.GET and 'status' not in request.GET:
+        #     qs = qs.active()
         return qs.select_related('region')
     
     # Настройка прав для действий
