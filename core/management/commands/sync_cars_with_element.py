@@ -111,8 +111,10 @@ class Command(BaseCommand):
             parts.append(f"создано: {stats['created']}")
         if stats.get("updated", 0) > 0:
             parts.append(f"обновлено: {stats['updated']}")
-        if stats.get("deactivated", 0) > 0:
-            parts.append(f"деактивировано: {stats['deactivated']}")
+        if stats.get("restored", 0) > 0:
+            parts.append(f"восстановлено: {stats['restored']}")
+        if stats.get("archived", 0) > 0:
+            parts.append(f"архивировано: {stats['archived']}")
         if stats.get("regions_created", 0) > 0:
             parts.append(f"регионов создано: {stats['regions_created']}")
         if stats.get("regions_updated", 0) > 0:
