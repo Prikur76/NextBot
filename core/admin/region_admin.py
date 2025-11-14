@@ -1,8 +1,7 @@
-from django.contrib import admin
+from django.contrib import admin, messages
 from django.http import HttpResponseRedirect
 from django.shortcuts import render
 from django.urls import path
-from django.contrib import messages
 from django.utils.html import format_html
 
 from core.models import Region
