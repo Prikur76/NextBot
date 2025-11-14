@@ -1,12 +1,13 @@
-from django.contrib import admin
+from asgiref.sync import async_to_sync
+from django.contrib import admin, messages
 from django.http import HttpResponseRedirect
 from django.urls import path
-from django.contrib import messages
 from django.utils.html import format_html
 
 from core.models import Region, Zone, FuelRecord
 from core.admin.actions import export_action
 from core.services.export_service import ExportService
+from core.services.google_sheets_service import FuelRecordGoogleSheetsService
 
 
 # Кастомные фильтры для FuelRecord
@@ -69,7 +70,8 @@ class FuelRecordAdmin(admin.ModelAdmin):
         "reject_selected", 
         "export_to_csv",
         "export_to_excel",
-        "mark_suspicious"
+        "mark_suspicious",
+        "sync_to_google_sheets"
     ]
     
     # Настройка отображения детальной формы
@@ -223,6 +225,11 @@ class FuelRecordAdmin(admin.ModelAdmin):
                 self.admin_site.admin_view(self.export_fuel_report),
                 name='export_fuel_report'
             ),
+            path(
+                'sync-to-gsheets/',
+                self.admin_site.admin_view(self.sync_to_gsheets_view),
+                name='sync_to_gsheets'
+            ),
         ]
         return custom_urls + urls
     
@@ -374,3 +381,62 @@ class FuelRecordAdmin(admin.ModelAdmin):
         )
         
         return response
+    
+    @admin.action(description="📊 Синхронизировать с GSheets")
+    def sync_to_google_sheets(self, request, queryset):
+        """Синхронизация выбранных записей с Google Sheets"""
+        try:
+            service = FuelRecordGoogleSheetsService()
+            record_ids = list(queryset.values_list('id', flat=True))
+            
+            # Используем async_to_sync для вызова асинхронного метода
+            result = async_to_sync(service.sync_multiple_records)(record_ids)
+            
+            if result['success']:
+                if result['synced_count'] == result['total_count']:
+                    messages.success(
+                        request, 
+                        f'✅ Успешно синхронизировано {result["synced_count"]} записей с Google Sheets'
+                    )
+                else:
+                    messages.warning(
+                        request,
+                        f'⚠️ Синхронизировано {result["synced_count"]} из {result["total_count"]} записей'
+                    )
+            else:
+                messages.error(
+                    request,
+                    f'❌ Ошибка синхронизации: {result.get("error", "Неизвестная ошибка")}'
+                )
+                
+        except Exception as e:
+            messages.error(
+                request,
+                f'❌ Ошибка синхронизации с Google Sheets: {str(e)}'
+            )
+    
+    def sync_to_gsheets_view(self, request):
+        """View для полной синхронизации с Google Sheets"""
+        try:
+            service = FuelRecordGoogleSheetsService()
+            result = async_to_sync(service.sync_all_records)()
+            
+            if result['success']:
+                messages.success(
+                    request,
+                    f"✅ {result['message']}"
+                )
+            else:
+                messages.error(
+                    request,
+                    f"❌ Ошибка синхронизации: {result.get('error', 'Неизвестная ошибка')}"
+                )
+                
+        except Exception as e:
+            messages.error(
+                request,
+                f'❌ Ошибка синхронизации: {str(e)}'
+            )
+        
+        return HttpResponseRedirect('../')
+    

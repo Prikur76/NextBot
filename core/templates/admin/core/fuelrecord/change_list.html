@@ -105,6 +105,7 @@
             <a href="fuel-statistics/" class="btn btn-info btn-sm">📊 Подробная статистика</a>
             <a href="suspicious-records/" class="btn btn-warning btn-sm">🚨 Подозрительные записи</a>
             <a href="export-fuel-report/" class="btn btn-success btn-sm">📥 Экспорт отчета</a>
+            <a href="sync-to-gsheets/" class="btn btn-success btn-sm">📊 Синхронизировать с GSheets</a>
             {% if cl.result_count %}
             <a href="?approved__exact=0" class="btn btn-outline-warning btn-sm">⏳ Ожидают подтверждения ({{ stats.pending_records }})</a>
             {% endif %}
