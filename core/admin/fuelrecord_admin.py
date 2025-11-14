@@ -5,7 +5,7 @@ from django.contrib import messages
 from django.utils.html import format_html
 
 from core.models import Region, Zone, FuelRecord
-from core.admin_actions import export_action
+from core.admin.actions import export_action
 from core.services.export_service import ExportService
 
 
