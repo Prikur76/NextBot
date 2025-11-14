@@ -168,12 +168,12 @@ LOG_DIR.mkdir(exist_ok=True)
 # EMAIL_HOST_PASSWORD = "your_password"
 # SERVER_EMAIL = EMAIL_HOST_USER
 # DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+
 ADMINS = [("Admin", "admin@example.com")]  # кто получит письма об ошибках
 
 LOGGING = {
     "version": 1,
-    "disable_existing_loggers": False,  # оставляем стандартные Django-логгеры
-
+    "disable_existing_loggers": False,
     "formatters": {
         "verbose": {
             "format": "[{asctime}] {levelname} [{name}:{lineno}] {message}",
@@ -191,22 +191,41 @@ LOGGING = {
             "class": "logging.StreamHandler",
             "formatter": "simple",
         },
-        # Лог-файл всего проекта
+        
+        # Лог-файл всего проекта с ротацией по размеру
         "file_general": {
-            "class": "logging.FileHandler",
+            "class": "logging.handlers.RotatingFileHandler",
             "filename": LOG_DIR / "project.log",
+            "maxBytes": 10 * 1024 * 1024,  # 10 MB
+            "backupCount": 5,  # хранить 5 backup файлов
             "formatter": "verbose",
             "level": "INFO",
             "encoding": "utf-8",
-        
         },
-        # Отдельный файл для ошибок
+        
+        # Отдельный файл для ошибок с ротацией по дням
         "file_errors": {
-            "class": "logging.FileHandler",
+            "class": "logging.handlers.TimedRotatingFileHandler",
             "filename": LOG_DIR / "errors.log",
+            "when": "midnight",  # ротация каждый день в полночь
+            "interval": 1,  # каждый день
+            "backupCount": 30,  # хранить 30 дней логов
             "formatter": "verbose",
             "level": "ERROR",
+            "encoding": "utf-8",
         },
+        
+        # Файл для SQL запросов с ограничением по размеру
+        "file_sql": {
+            "class": "logging.handlers.RotatingFileHandler",
+            "filename": LOG_DIR / "sql.log",
+            "maxBytes": 5 * 1024 * 1024,  # 5 MB
+            "backupCount": 3,  # хранить 3 backup файла
+            "formatter": "verbose",
+            "level": "DEBUG",
+            "encoding": "utf-8",
+        },
+        
         # Письма администраторам (только в продакшене)
         "mail_admins": {
             "class": "django.utils.log.AdminEmailHandler",
@@ -228,7 +247,7 @@ LOGGING = {
             "propagate": True,
         },
 
-        # Ошибки безопасности (например, CSRF, PermissionDenied)
+        # Ошибки безопасности
         "django.security": {
             "handlers": ["file_errors"],
             "level": "WARNING",
@@ -242,10 +261,10 @@ LOGGING = {
             "propagate": False,
         },
 
-        # Логгер ORM (SQL-запросы)
+        # Логгер ORM (SQL-запросы) - теперь в отдельный файл
         "django.db.backends": {
-            "handlers": ["file_general"],
-            "level": "WARNING",  # DEBUG для просмотра SQL
+            "handlers": ["file_sql"],
+            "level": "DEBUG",  # DEBUG для просмотра SQL
             "propagate": False,
         },
 
@@ -256,11 +275,29 @@ LOGGING = {
             "propagate": False,
         },
 
-        # Пользовательские ошибки (например, отчёты, заправки)
+        # Пользовательские ошибки
         "nextbot.custom": {
             "handlers": ["console", "file_errors"],
             "level": "WARNING",
             "propagate": False,
         },
+        
+        # Логгер для синхронизации с 1С
+        "core.clients": {
+            "handlers": ["console", "file_general"],
+            "level": "INFO",
+            "propagate": False,
+        },
     },
 }
+
+# Настройки логирования в продакшене
+if not DEBUG:
+    LOGGING["handlers"]["console"]["level"] = "WARNING"  # меньше шума в консоли
+    LOGGING["root"]["handlers"] = ["file_general", "file_errors", "mail_admins"]
+    
+    # Увеличиваем ограничения
+    LOGGING["handlers"]["file_general"]["maxBytes"] = 100 * 1024 * 1024  # 100 MB
+    LOGGING["handlers"]["file_general"]["backupCount"] = 10  # 10 файлов
+    LOGGING["handlers"]["file_errors"]["backupCount"] = 180  # 6 месяцев
+    
