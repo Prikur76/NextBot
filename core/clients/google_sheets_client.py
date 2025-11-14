@@ -16,8 +16,6 @@ class GoogleSheetsClient:
         self._creds_path = getattr(settings, 'GSHEET_CREDENTIALS_JSON_PATH', None)
         self.spreadsheet_id = spreadsheet_id or getattr(settings, 'GSHEET_SPREADSHEET_ID', None)
         self._client = None
-        print(f"Google Sheets credentials path: {self._creds_path}")
-        print(f"Google Sheets spreadsheet id: {self.spreadsheet_id}")
         
         # Московское время
         self.MOSCOW_TZ = pytz.timezone("Europe/Moscow")
