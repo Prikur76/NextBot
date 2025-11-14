@@ -1,16 +1,15 @@
-import asyncio
+import aiohttp
 import logging
-from datetime import datetime
-from typing import List, Optional, Dict, Any
 import json
 import re
 
-import aiohttp
 from asgiref.sync import sync_to_async
+from datetime import datetime
+from typing import List, Optional, Dict, Any
 from django.conf import settings
 
 from core.models import Car, Region
-from core.utils.logging import log_sync_failure, log_sync_success
+
 
 logger = logging.getLogger(__name__)
 
