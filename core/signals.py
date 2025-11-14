@@ -1,11 +1,13 @@
 # core/signals.py
-from django.db.models.signals import post_migrate
+from asgiref.sync import async_to_sync
+from django.db.models.signals import post_migrate, post_save
+from django.dispatch import receiver
 from django.contrib.auth.models import Group, Permission
 from django.contrib.auth.signals import user_logged_in, user_logged_out
-from django.dispatch import receiver
 from django.contrib.contenttypes.models import ContentType
 
-from core.models import FuelRecord, Car, Region, Zone, User
+from core.models import FuelRecord, Car, Region, Zone
+from core.services.google_sheets_service import FuelRecordGoogleSheetsService
 from core.utils.logging import log_action
 
 
@@ -60,6 +62,21 @@ def create_default_groups(sender, **kwargs):
             print(f"ℹ️ Группа '{group_name}' уже существует.")
 
 
+@receiver(post_save, sender=FuelRecord)
+def sync_fuel_record_to_google_sheets(sender, instance, created, **kwargs):
+    """
+    Автоматическая синхронизация новой записи о заправке с Google Sheets
+    """
+    if created:
+        # Используем async_to_sync для вызова асинхронного кода из синхронного контекста
+        try:
+            service = FuelRecordGoogleSheetsService()
+            async_to_sync(service.sync_single_record)(instance.id)
+        except Exception as e:
+            # Логируем ошибку, но не прерываем выполнение
+            print(f"Ошибка синхронизации с Google Sheets: {e}")
+            
+
 @receiver(user_logged_in)
 def log_user_login(sender, request, user, **kwargs):
     ip = request.META.get("REMOTE_ADDR")
@@ -70,3 +87,5 @@ def log_user_login(sender, request, user, **kwargs):
 def log_user_logout(sender, request, user, **kwargs):
     ip = request.META.get("REMOTE_ADDR")
     log_action(user, "logout", "Пользователь вышел из системы", ip)
+    
+

@@ -10,9 +10,12 @@ dependencies = [
     "django-ninja>=1.4.5",
     "editorconfig-checker>=3.4.1",
     "environs[django]>=14.5.0",
+    "google-auth>=2.43.0",
+    "gspread>=6.2.1",
     "polars>=1.35.2",
     "pydantic-settings>=2.11.0",
     "python-telegram-bot>=22.5",
+    "pytz>=2025.2",
     "ruff>=0.14.4",
     "xlsxwriter>=3.2.9",
 ]
