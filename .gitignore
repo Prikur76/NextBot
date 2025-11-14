@@ -215,6 +215,10 @@ __marimo__/
 # Streamlit
 .streamlit/secrets.toml
 
+# This project
 uv.lock
 .python-version
 migrations/
+
+local_secrets/
+logs/
