@@ -7,7 +7,7 @@ from django.db.models import Count
 from django.utils import timezone
 
 from core.models import Car
-from core.admin_actions import export_action
+from core.admin.actions import export_action
 from core.services.car_service import CarService
 from core.services.export_service import ExportService
 
@@ -16,8 +16,8 @@ from core.services.export_service import ExportService
 class CarAdmin(admin.ModelAdmin):
     list_display = (
         "code", "model", "vin", "state_number", 
-        "manufacture_year", "department_short", "region_link", 
-        "car_age", "is_active_display", "status_display", "created_at"
+        "manufacture_year", "owner_inn","department_short", "region_link", 
+        "car_age", "status_display", "is_active_display",  "created_at"
     )
     list_filter = (
         "is_active", "region", "department", 
