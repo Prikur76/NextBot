@@ -269,7 +269,6 @@ class Car(models.Model):
         verbose_name="Код автомобиля")
     vin = models.CharField(
         max_length=17,
-        unique=True,
         blank=True,
         default="",
         verbose_name="VIN")
