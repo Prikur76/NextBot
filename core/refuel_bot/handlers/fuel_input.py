@@ -11,12 +11,17 @@ from telegram.ext import (
     filters,
     ContextTypes,
 )
+from warnings import filterwarnings
+from telegram.warnings import PTBUserWarning
 
 from core.refuel_bot.keyboards.cancel_keyboard import CancelKeyboard
 from core.refuel_bot.keyboards.main_keyboard import MainKeyboard
 from core.refuel_bot.keyboards.refuel_method_keyboard import RefuelMethodKeyboard
 from core.refuel_bot.utils.validate_state_plate import is_valid_plate, normalize_plate_input
 from core.models import Car, FuelRecord
+
+
+filterwarnings(action="ignore", message=r".*CallbackQueryHandler", category=PTBUserWarning)
 
 
 # States
