@@ -83,6 +83,7 @@ class ZoneAdmin(admin.ModelAdmin):
         return obj.active_cars_count
 
     # --- Actions ---
+    @admin.action(description="📦 В архив")
     def archive_selected(self, request, queryset):
         archived = 0
         blocked = 0
@@ -98,7 +99,8 @@ class ZoneAdmin(admin.ModelAdmin):
             self.message_user(request, f"Архивировано {archived} зон.", messages.SUCCESS)
         if blocked:
             self.message_user(request, f"{blocked} зон не могут быть архивированы (есть активные авто).", messages.WARNING)
-
+    
+    @admin.action(description="✅ Активировать")
     def restore_selected(self, request, queryset):
         restored = queryset.update(active=True)
         self.message_user(request, f"Восстановлено {restored} зон.", messages.SUCCESS)

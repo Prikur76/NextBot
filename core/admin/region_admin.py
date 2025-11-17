@@ -76,7 +76,8 @@ class RegionAdmin(admin.ModelAdmin):
         return obj.active_cars_count
     active_cars_count_display.short_description = "Активных автомобилей"
     
-    # Кастомные действия    
+    # Кастомные действия
+    @admin.action(description="📦 В архив")
     def archive_selected(self, request, queryset):
         """Архивировать выбранные регионы"""
         archived_count = 0
@@ -103,8 +104,7 @@ class RegionAdmin(admin.ModelAdmin):
                 messages.WARNING
             )
     
-    archive_selected.short_description = "📦 Архивировать выбранные регионы"
-    
+    @admin.action(description="🔄 Восстановить")  
     def restore_selected(self, request, queryset):
         """Восстановить выбранные регионы из архива"""
         restored_count = 0
@@ -120,41 +120,6 @@ class RegionAdmin(admin.ModelAdmin):
                 f'Восстановлено {restored_count} регионов из архива',
                 messages.SUCCESS
             )
-    
-    restore_selected.short_description = "🔄 Восстановить выбранные регионы"
-    
-    def archive_empty_regions(self, request, queryset):
-        """Архивировать регионы без активных автомобилей"""
-        from core.services.region_service import RegionService
-        
-        result = RegionService.archive_empty_regions()
-        
-        if result['archived'] > 0:
-            self.message_user(
-                request,
-                f'Автоматически архивировано {result["archived"]} регионов без активных автомобилей',
-                messages.SUCCESS
-            )
-            
-            # Показываем список архивированных регионов
-            region_names = [r['name'] for r in result['regions'][:10]]  # Первые 10
-            details = ", ".join(region_names)
-            if len(result['regions']) > 10:
-                details += f" и еще {len(result['regions']) - 10} регионов"
-                
-            self.message_user(
-                request,
-                f"Архивированные регионы: {details}",
-                messages.INFO
-            )
-        else:
-            self.message_user(
-                request,
-                "Не найдено регионов для архивации (все регионы имеют активные автомобили)",
-                messages.INFO
-            )
-    
-    archive_empty_regions.short_description = "🧹 Архивировать пустые регионы"
     
     def archive_empty_regions_view(self, request):
         """View для архивации пустых регионов"""
