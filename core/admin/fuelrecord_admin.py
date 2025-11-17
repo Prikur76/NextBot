@@ -63,7 +63,7 @@ class FuelRecordAdmin(admin.ModelAdmin):
         "created_at", "updated_at", "display_info"
     )
     list_display_links = ("id", "filled_at_formatted")
-    list_per_page = 25
+    list_per_page = 30
     
     actions = [
         "approve_selected",

@@ -14,7 +14,7 @@ class ZoneAdmin(admin.ModelAdmin):
     )
     list_filter = ("active",)
     search_fields = ("name", "code")
-    list_per_page = 25
+    list_per_page = 30
 
     actions = ["archive_selected", "restore_selected"]
 

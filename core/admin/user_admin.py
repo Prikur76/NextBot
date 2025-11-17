@@ -21,7 +21,7 @@ class UserAdmin(DjangoUserAdmin):
         ("Персональные данные", {"fields": ("first_name", "last_name", "phone", "telegram_id", "region", "zone")}),
         ("Права доступа", {"fields": ("is_active", "is_staff", "is_superuser", "groups", "user_permissions")}),
     )
-    list_per_page = 20
+    list_per_page = 30
     
     @admin.display(description="ФИО")
     def get_full_name(self, obj):

@@ -50,7 +50,7 @@ class CarAdmin(admin.ModelAdmin):
     )
     
     readonly_fields = ("created_at", "updated_at", "display_name")
-    list_per_page = 25
+    list_per_page = 30
     
     actions = [
         "export_selected_cars", 
