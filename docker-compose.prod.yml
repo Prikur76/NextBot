@@ -1,0 +1,112 @@
+version: "3.9"
+
+services:
+
+  traefik:
+    image: traefik:latest
+    container_name: traefik
+    command:
+      - --api.dashboard=true
+      - --providers.docker=true
+
+      - --entrypoints.web.address=:80
+      - --entrypoints.websecure.address=:443
+
+      - --certificatesresolvers.myresolver.acme.email=${LETSENCRYPT_EMAIL}
+      - --certificatesresolvers.myresolver.acme.storage=/acme/acme.json
+      - --certificatesresolvers.myresolver.acme.tlschallenge=true
+
+    ports:
+      - "80:80"
+      - "443:443"
+
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - ./traefik/acme:/acme
+      - ./traefik/dynamic.yml:/etc/traefik/dynamic.yml:ro
+
+    restart: unless-stopped
+
+
+  postgres:
+    image: postgres:15
+    container_name: postgres_prod
+    env_file: .env
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+
+
+  web:
+    build: .
+    container_name: nextbot_prod
+    env_file: .env
+    depends_on:
+      - postgres
+
+    command: >
+      gunicorn nextbot.asgi:application
+      -k uvicorn.workers.UvicornWorker
+      --bind 0.0.0.0:8000
+      --workers 4
+      --log-level info
+
+    volumes:
+      - static_volume:/app/static
+      - media_volume:/app/media
+
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.nextbot.rule=Host(`${DOMAIN}`)"
+      - "traefik.http.routers.nextbot.entrypoints=websecure"
+      - "traefik.http.routers.nextbot.tls.certresolver=myresolver"
+      - "traefik.http.services.nextbot.loadbalancer.server.port=8000"
+
+    restart: unless-stopped
+
+
+  scheduler:
+    build: .
+    env_file: .env
+    container_name: scheduler_prod
+    depends_on:
+      - web
+
+    entrypoint: ["/bin/sh", "-c"]
+    command: >
+      while true; do
+        python manage.py sync_cars_with_element;
+        sleep $(( ${SYNC_CARS_SCHEDULE_MINUTES:-5} * 60 ));
+      done;
+
+    restart: unless-stopped
+
+
+  pg_backup:
+    image: postgres:15
+    env_file: .env
+    container_name: pg_backup_prod
+    entrypoint: ["/bin/bash", "-c"]
+    command: >
+      while true; do
+        echo "[Backup] Starting...";
+        TIMESTAMP=$(date +%Y-%m-%d_%H-%M-%S);
+        pg_dump -U ${POSTGRES_USER} -h postgres ${POSTGRES_DB} \
+          | gzip > /backups/db_$TIMESTAMP.sql.gz;
+        find /backups -type f -mtime +${POSTGRES_BACKUP_RETENTION_DAYS} -delete;
+        sleep 86400;
+      done;
+
+    depends_on:
+      - postgres
+    volumes:
+      - db_backups:/backups
+
+    restart: unless-stopped
+
+
+volumes:
+  pgdata:
+  static_volume:
+  media_volume:
+  db_backups:
