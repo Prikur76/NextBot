@@ -186,47 +186,44 @@ LOGGING = {
     },
 
     "handlers": {
-        # Консоль (для локальной разработки и Docker)
         "console": {
             "class": "logging.StreamHandler",
             "formatter": "simple",
         },
         
-        # Лог-файл всего проекта с ротацией по размеру
         "file_general": {
             "class": "logging.handlers.RotatingFileHandler",
             "filename": LOG_DIR / "project.log",
-            "maxBytes": 10 * 1024 * 1024,  # 10 MB
-            "backupCount": 5,  # хранить 5 backup файлов
+            "maxBytes": 10 * 1024 * 1024,
+            "backupCount": 5,
             "formatter": "verbose",
             "level": "INFO",
             "encoding": "utf-8",
+            "delay": True,  # Добавлено
         },
         
-        # Отдельный файл для ошибок с ротацией по дням
         "file_errors": {
             "class": "logging.handlers.TimedRotatingFileHandler",
             "filename": LOG_DIR / "errors.log",
-            "when": "midnight",  # ротация каждый день в полночь
-            "interval": 1,  # каждый день
-            "backupCount": 30,  # хранить 30 дней логов
+            "when": "midnight",
+            "interval": 1,
+            "backupCount": 30,
             "formatter": "verbose",
             "level": "ERROR",
             "encoding": "utf-8",
         },
         
-        # Файл для SQL запросов с ограничением по размеру
         "file_sql": {
             "class": "logging.handlers.RotatingFileHandler",
             "filename": LOG_DIR / "sql.log",
-            "maxBytes": 5 * 1024 * 1024,  # 5 MB
-            "backupCount": 3,  # хранить 3 backup файла
+            "maxBytes": 5 * 1024 * 1024,
+            "backupCount": 3,
             "formatter": "verbose",
             "level": "DEBUG",
             "encoding": "utf-8",
+            "delay": True,  # Убедитесь, что есть
         },
         
-        # Письма администраторам (только в продакшене)
         "mail_admins": {
             "class": "django.utils.log.AdminEmailHandler",
             "level": "ERROR",
@@ -240,49 +237,43 @@ LOGGING = {
     },
 
     "loggers": {
-        # Основной логгер Django
         "django": {
             "handlers": ["console", "file_general"],
             "level": "INFO",
-            "propagate": True,
+            "propagate": False,  # Измените на False
         },
 
-        # Ошибки безопасности
         "django.security": {
             "handlers": ["file_errors"],
             "level": "WARNING",
             "propagate": False,
         },
 
-        # Логгер запросов (404, 500)
         "django.request": {
             "handlers": ["file_errors", "mail_admins"],
             "level": "ERROR",
             "propagate": False,
         },
 
-        # Логгер ORM (SQL-запросы) - теперь в отдельный файл
+        # ИСПРАВЛЕННЫЙ SQL логгер
         "django.db.backends": {
-            "handlers": ["file_sql"],
-            "level": "DEBUG",  # DEBUG для просмотра SQL
-            "propagate": False,
+            "handlers": ["file_sql"],  # Только файл
+            "level": "DEBUG",
+            "propagate": False,  # Не пропускать выше
         },
 
-        # Telegram-бот
         "core.bot": {
             "handlers": ["console", "file_general"],
             "level": "INFO",
             "propagate": False,
         },
 
-        # Пользовательские ошибки
         "nextbot.custom": {
             "handlers": ["console", "file_errors"],
             "level": "WARNING",
             "propagate": False,
         },
         
-        # Логгер для синхронизации с 1С
         "core.clients": {
             "handlers": ["console", "file_general"],
             "level": "INFO",
