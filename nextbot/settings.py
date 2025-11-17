@@ -9,8 +9,12 @@ https://docs.djangoproject.com/en/5.2/topics/settings/
 For the full list of settings and their values, see
 https://docs.djangoproject.com/en/5.2/ref/settings/
 """
+import dj_database_url
+
 from environs import Env
 from pathlib import Path
+
+
 
 
 env = Env()
@@ -83,11 +87,31 @@ WSGI_APPLICATION = 'nextbot.wsgi.application'
 # Database
 # https://docs.djangoproject.com/en/5.2/ref/settings/#databases
 
+
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.sqlite3',
+#         'NAME': BASE_DIR / 'db.sqlite3',
+#     }
+# }
+
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql',
+#         'NAME': env.str("POSTGRES_DB", "postgres"),
+#         'USER': env.str("POSTGRES_USER", "postgres"),
+#         'PASSWORD': env.str("POSTGRES_PASSWORD", "postgres"),
+#         'HOST': env.str("POSTGRES_HOST", "localhost"),
+#         'PORT': env.int("POSTGRES_PORT", 5432),
+#     }
+# }
+
 DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
-    }
+    "default": dj_database_url.parse(
+        env.str("DATABASE_URL"),
+        conn_max_age=600,
+        ssl_require=False,
+    )
 }
 
 
@@ -125,7 +149,12 @@ USE_TZ = True
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.2/howto/static-files/
 
-STATIC_URL = 'static/'
+STATIC_URL = "/static/"
+STATIC_ROOT = BASE_DIR / "static"
+
+MEDIA_URL = "/media/"
+MEDIA_ROOT = BASE_DIR / "media"
+
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
@@ -292,3 +321,12 @@ if not DEBUG:
     LOGGING["handlers"]["file_general"]["backupCount"] = 10  # 10 файлов
     LOGGING["handlers"]["file_errors"]["backupCount"] = 180  # 6 месяцев
     
+
+CORS_ALLOW_ALL_ORIGINS = True
+CSRF_TRUSTED_ORIGINS = [
+    "https://refuel.txnxt.ru",
+]
+
+SESSION_COOKIE_SECURE = True
+CSRF_COOKIE_SECURE = True
+SECURE_SSL_REDIRECT = not DEBUG
