@@ -1,0 +1,11 @@
+http:
+  middlewares:
+    redirect-to-https:
+      redirectScheme:
+        scheme: https
+        permanent: true
+
+    dashboard-auth:
+      basicAuth:
+        users:
+          - ${TRAEFIK_DASHBOARD_USER}
