@@ -3,6 +3,7 @@ from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect
 from django.utils import timezone
 from django.contrib import messages
+from django.http import JsonResponse
 
 from core.models import Car, FuelRecord
 from core.utils.logging import log_action
@@ -98,3 +99,7 @@ def reports(request):
         })       
         
     return render(request, "web/reports.html", {"records": context})
+
+
+def health_check(request):
+    return JsonResponse({"status": "healthy", "timestamp": timezone.now()})

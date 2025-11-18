@@ -7,4 +7,5 @@ urlpatterns = [
     path("", views.index, name="index"),
     path("fuel/add/", views.add_fuel_record, name="add_fuel"),
     path("fuel/reports/", views.reports, name="reports"),
+    path("health/", views.health_check, name="health"),
 ]
