@@ -184,17 +184,24 @@ LOGIN_URL = "/admin/login/?next=/admin/"
 LOG_DIR = BASE_DIR / "logs"
 LOG_DIR.mkdir(exist_ok=True)
 
-# EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
-# EMAIL_HOST = "smtp.gmail.com"
-# EMAIL_PORT = 587
-# EMAIL_USE_TLS = True
-# EMAIL_HOST_USER = "your_email@gmail.com"
-# EMAIL_HOST_PASSWORD = "your_password"
-# SERVER_EMAIL = EMAIL_HOST_USER
-# DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = env.str("EMAIL_HOST", "smtp.gmail.com")
+EMAIL_PORT = env.int("EMAIL_PORT", 587)
+EMAIL_USE_TLS = env.bool("EMAIL_USE_TLS", True)
+EMAIL_HOST_USER = env.str("EMAIL_HOST_USER", "your_email@gmail.com")
+EMAIL_HOST_PASSWORD = env.str("EMAIL_HOST_PASSWORD", "your_password")
+SERVER_EMAIL = EMAIL_HOST_USER
+DEFAULT_FROM_EMAIL = EMAIL_HOST_USER
 
-ADMINS = [("Admin", "admin@example.com")]  # кто получит письма об ошибках
+# кто получит письма об ошибках
+ADMINS = [     
+    (
+        env.str("DJANGO_SUPERUSER_USERNAME", "admin"), 
+        env.str("DJANGO_SUPERUSER_EMAIL", "admin@example.com")
+    )
+] 
 
+# конфигурация логирования 
 LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
@@ -208,7 +215,6 @@ LOGGING = {
             "style": "{",
         },
     },
-
     "handlers": {
         "console": {
             "class": "logging.StreamHandler",
@@ -223,7 +229,7 @@ LOGGING = {
             "formatter": "verbose",
             "level": "INFO",
             "encoding": "utf-8",
-            "delay": True,  # Добавлено
+            "delay": True,
         },
         
         "file_errors": {
@@ -244,7 +250,7 @@ LOGGING = {
             "formatter": "verbose",
             "level": "DEBUG",
             "encoding": "utf-8",
-            "delay": True,  # Убедитесь, что есть
+            "delay": True,
         },
         
         "mail_admins": {
@@ -253,12 +259,10 @@ LOGGING = {
             "formatter": "verbose",
         },
     },
-
     "root": {
         "handlers": ["console", "file_general", "file_errors"],
         "level": "INFO",
     },
-
     "loggers": {
         "django": {
             "handlers": ["console", "file_general"],
@@ -306,13 +310,17 @@ LOGGING = {
 
 # Настройки логирования в продакшене
 if not DEBUG:
-    LOGGING["handlers"]["console"]["level"] = "WARNING"  # меньше шума в консоли
+    LOGGING["handlers"]["console"]["level"] = "WARNING"
     LOGGING["root"]["handlers"] = ["file_general", "file_errors", "mail_admins"]
     
     # Увеличиваем ограничения
     LOGGING["handlers"]["file_general"]["maxBytes"] = 100 * 1024 * 1024  # 100 MB
     LOGGING["handlers"]["file_general"]["backupCount"] = 10  # 10 файлов
     LOGGING["handlers"]["file_errors"]["backupCount"] = 180  # 6 месяцев
+
+
+# Настройки для статических файлов в продакшене
+STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.ManifestStaticFilesStorage'
 
 
 # === HTTPS/SSL настройки для разработки ===
@@ -338,3 +346,4 @@ SSL_PRIVATE_KEY = None
 # CSRF_TRUSTED_ORIGINS = [
 #     "https://refuel.txnxt.ru",
 # ]
+
