@@ -111,32 +111,62 @@ class CarAdmin(admin.ModelAdmin):
         """Добавляем расширенную статистику в список автомобилей"""
         extra_context = extra_context or {}
         
-        # Базовая статистика
-        stats = Car.objects.statistics_summary()
-        
-        # Статистика по возрасту
-        age_stats = CarService.get_age_statistics()
-        
-        # Формируем читаемую статистику с правильными ключами
-        readable_stats = {
-            'total_cars': stats['total_cars'],
-            'active_cars': stats['active_cars'],
-            'cars_with_region': stats['cars_with_region'],
-            'avg_age': f"{stats.get('avg_age', 0):.1f} лет",
-            'age_range': f"{stats.get('min_age', 0)}-{stats.get('max_age', 0)} лет",
-            'year_range': f"{stats.get('oldest_car_year', 0)}-{stats.get('newest_car_year', 0)}",
-        }
-        
-        # Создаем словарь с читаемыми названиями групп для шаблона
-        age_distribution_display = {
-            '0_3_years': age_stats['age_ranges']['0_3_years'],
-            '4_7_years': age_stats['age_ranges']['4_7_years'],
-            '8_12_years': age_stats['age_ranges']['8_12_years'],
-            '13_plus_years': age_stats['age_ranges']['13_plus_years'],
-        }
-        
-        extra_context['stats'] = readable_stats
-        extra_context['age_distribution'] = age_distribution_display
+        try:
+            # Базовая статистика
+            stats = Car.objects.statistics_summary()
+            
+            # Статистика по возрасту
+            age_stats = CarService.get_age_statistics()
+            
+            # БЕЗОПАСНОЕ форматирование с проверкой None
+            avg_age = stats.get('avg_age', 0)
+            min_age = stats.get('min_age', 0)
+            max_age = stats.get('max_age', 0)
+            oldest_car_year = stats.get('oldest_car_year', 0)
+            newest_car_year = stats.get('newest_car_year', 0)
+            
+            # Формируем читаемую статистику с правильными ключами
+            readable_stats = {
+                'total_cars': stats.get('total_cars', 0),
+                'active_cars': stats.get('active_cars', 0),
+                'cars_with_region': stats.get('cars_with_region', 0),
+                'avg_age': f"{avg_age:.1f} лет" if avg_age is not None else "0 лет",
+                'age_range': f"{min_age}-{max_age} лет" if min_age and max_age else "не определен",
+                'year_range': f"{oldest_car_year}-{newest_car_year}" if oldest_car_year and newest_car_year else "не определен",
+            }
+            
+            # Создаем словарь с читаемыми названиями групп для шаблона
+            age_distribution_display = {
+                '0_3_years': age_stats.get('age_ranges', {}).get('0_3_years', 0),
+                '4_7_years': age_stats.get('age_ranges', {}).get('4_7_years', 0),
+                '8_12_years': age_stats.get('age_ranges', {}).get('8_12_years', 0),
+                '13_plus_years': age_stats.get('age_ranges', {}).get('13_plus_years', 0),
+            }
+            
+            extra_context['stats'] = readable_stats
+            extra_context['age_distribution'] = age_distribution_display
+            
+        except Exception as e:
+            # Логируем ошибку, но не прерываем выполнение
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Ошибка при формировании статистики: {str(e)}")
+            
+            # Устанавливаем значения по умолчанию
+            extra_context['stats'] = {
+                'total_cars': 0,
+                'active_cars': 0,
+                'cars_with_region': 0,
+                'avg_age': "0 лет",
+                'age_range': "не определен",
+                'year_range': "не определен",
+            }
+            extra_context['age_distribution'] = {
+                '0_3_years': 0,
+                '4_7_years': 0,
+                '8_12_years': 0,
+                '13_plus_years': 0,
+            }
         
         return super().changelist_view(request, extra_context=extra_context)
     

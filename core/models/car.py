@@ -182,32 +182,47 @@ class CarQuerySet(QuerySet):
         ).distinct()
     
     def statistics_summary(self):
-        """Сводная статистика по автомобилям с возрастом"""
-        current_year = timezone.now().year
-        
-        # Базовая статистика
-        stats = self.aggregate(
-            total_cars=Count('id'),
-            active_cars=Count('id', filter=Q(is_active=True)),
-            cars_with_region=Count('id', filter=Q(region__isnull=False)),
-            avg_manufacture_year=Avg('manufacture_year'),
-            unique_departments=Count('department', distinct=True),
-            unique_regions=Count('region', distinct=True)
-        )
-        
-        # Добавляем статистику по возрасту
-        age_stats = self.filter(manufacture_year__isnull=False).aggregate(
-            avg_age=Avg(current_year - models.F('manufacture_year')),
-            min_age=Min(current_year - models.F('manufacture_year')),
-            max_age=Max(current_year - models.F('manufacture_year')),
-            newest_car_year=Max('manufacture_year'),
-            oldest_car_year=Min('manufacture_year')
-        )
-        
-        # Объединяем статистики
-        stats.update(age_stats)
-        
-        return stats
+        try:
+            current_year = timezone.now().year
+            
+            # Получаем статистику с защитой от None
+            stats = self.active().aggregate(
+                total_cars=Count('id'),
+                avg_age=Avg('manufacture_year'),
+                min_age=Min('manufacture_year'),
+                max_age=Max('manufacture_year'),
+            )
+            
+            # Преобразуем None в 0
+            avg_age = stats['avg_age']
+            if avg_age is not None:
+                avg_age = current_year - avg_age
+            
+            min_age = stats['min_age']
+            max_age = stats['max_age']
+            
+            return {
+                'total_cars': stats['total_cars'] or 0,
+                'active_cars': self.active().count(),
+                'cars_with_region': self.active().filter(region__isnull=False).count(),
+                'avg_age': avg_age or 0,
+                'min_age': current_year - min_age if min_age else 0,
+                'max_age': current_year - max_age if max_age else 0,
+                'oldest_car_year': min_age or 0,
+                'newest_car_year': max_age or 0,
+            }
+        except Exception as e:
+            # Возвращаем значения по умолчанию при ошибке
+            return {
+                'total_cars': 0,
+                'active_cars': 0,
+                'cars_with_region': 0,
+                'avg_age': 0,
+                'min_age': 0,
+                'max_age': 0,
+                'oldest_car_year': 0,
+                'newest_car_year': 0,
+            }
     
     def find_duplicates(self):
         """Находит потенциальные конфликты идентификаторов среди активных"""
