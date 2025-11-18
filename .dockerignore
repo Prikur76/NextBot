@@ -1,0 +1,54 @@
+# Локальные настройки и секреты
+.env
+*.env.local
+*.env
+.env.*
+
+# Виртуальное окружение
+venv/
+.venv/
+env/
+envs/
+
+# Логи и данные
+logs/
+data/
+*.log
+
+# Статика и медиа (если собираются через collectstatic)
+!/staticfiles  # исключение, если staticfiles — результат collectstatic
+
+# Медиафайлы пользователей (в продакшене — отдельно)
+/media/
+
+# Git
+.git
+.gitignore
+
+# PyCharm / IDE
+.idea/
+*.swp
+*~
+__pycache__/
+*.pyc
+*.db
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Node.js (если используется)
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Local Secrets
+local_secrets/
+
+staticfiles/
