@@ -30,9 +30,7 @@ services:
     build: .
     container_name: nextbot_prod
     env_file: .env
-    depends_on:
-      - postgres
-
+    
     command: >
       gunicorn nextbot.asgi:application
       -k uvicorn.workers.UvicornWorker
@@ -43,6 +41,8 @@ services:
     volumes:
       - static_volume:/app/static
       - media_volume:/app/media
+      - ./logs:/app/logs
+      - ./local_secrets:/app/local_secrets
 
     labels:
       - "traefik.enable=true"
@@ -53,49 +53,45 @@ services:
 
     restart: unless-stopped
 
+  bot:
+    build: .
+    container_name: telegram_bot_prod
+    env_file: .env
+    depends_on:
+      web:
+        condition: service_healthy
+    command: python manage.py runbot
+    restart: unless-stopped
+    volumes:
+      - ./logs:/app/logs
+      - ./local_secrets:/app/local_secrets
 
   scheduler:
     build: .
     env_file: .env
     container_name: scheduler_prod
     depends_on:
-      - web
+      web:
+        condition: service_healthy
 
     entrypoint: ["/bin/sh", "-c"]
     command: >
+      /bin/sh -c "
+      echo 'Scheduler starting...';
       while true; do
+        echo '[Scheduler] Running sync...';
         python manage.py sync_cars_with_element;
-        sleep $(( ${SYNC_CARS_SCHEDULE_MINUTES:-5} * 60 ));
-      done;
-
+        echo '[Scheduler] Sleeping for 5 minutes...';
+        sleep 300;
+      done
+      "
     restart: unless-stopped
-
-
-  pg_backup:
-    image: postgres:15
-    env_file: .env
-    container_name: pg_backup_prod
-    entrypoint: ["/bin/bash", "-c"]
-    command: >
-      while true; do
-        echo "[Backup] Starting...";
-        TIMESTAMP=$(date +%Y-%m-%d_%H-%M-%S);
-        pg_dump -U ${POSTGRES_USER} -h postgres ${POSTGRES_DB} \
-          | gzip > /backups/db_$TIMESTAMP.sql.gz;
-        find /backups -type f -mtime +${POSTGRES_BACKUP_RETENTION_DAYS} -delete;
-        sleep 86400;
-      done;
-
-    depends_on:
-      - postgres
     volumes:
-      - db_backups:/backups
-
-    restart: unless-stopped
-
+      - ./logs:/app/logs
+      - ./local_secrets:/app/local_secrets
 
 volumes:
-  pgdata:
   static_volume:
   media_volume:
-  db_backups:
+  logs:
+  local_secrets:

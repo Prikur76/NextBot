@@ -1,8 +1,10 @@
 services:
+
   web:
     build: .
     container_name: nextbot_local
     env_file: .env
+    
     command: >
       gunicorn nextbot.asgi:application
       -k uvicorn.workers.UvicornWorker
