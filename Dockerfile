@@ -21,6 +21,9 @@ RUN pip install --no-cache-dir -r requirements.txt
 # Copy source
 COPY . /app
 
+# Права на выполнение скриптов
+RUN chmod +x /app/scripts/entrypoint.sh
+
 # Non-root user
 RUN useradd -m appuser && chown -R appuser:appuser /app
 USER appuser
