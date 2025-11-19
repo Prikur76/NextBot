@@ -12,14 +12,14 @@ class FuelRecordGoogleSheetsService:
     """Сервис для синхронизации записей о заправках с Google Sheets"""
     
     def __init__(self):
-        self.sheet_name = getattr(settings, "GSHEET_SHEET_NAME", "Заправки")
+        self.sheet_name = settings.GSHEET.get("SHEET_NAME", "Заправки")
         self.client = GoogleSheetsClient()
     
     @sync_to_async
     def _get_all_fuel_records(self):
         """Асинхронное получение всех записей о заправках"""
         return list(FuelRecord.objects.select_related(
-            'car', 'employee', 'historical_region'
+            "car", "employee", "historical_region"
         ).all())
     
     @sync_to_async
@@ -27,7 +27,7 @@ class FuelRecordGoogleSheetsService:
         """Асинхронное получение записи по ID"""
         try:
             return FuelRecord.objects.select_related(
-                'car', 'employee', 'historical_region'
+                "car", "employee", "historical_region"
             ).get(id=record_id)
         except FuelRecord.DoesNotExist:
             return None
@@ -61,17 +61,17 @@ class FuelRecordGoogleSheetsService:
     def _get_fuel_type_display(self, fuel_type):
         """Получение читаемого значения типа топлива"""
         fuel_type_map = {
-            'GASOLINE': 'Бензин',
-            'DIESEL': 'Дизель',
+            "GASOLINE": "Бензин",
+            "DIESEL": "Дизель",
         }
         return fuel_type_map.get(fuel_type, fuel_type)
     
     def _get_source_display(self, source):
         """Получение читаемого значения способа заправки"""
         source_map = {
-            'CARD': 'Топливная карта',
-            'TGBOT': 'Телеграм-бот',
-            'TRUCK': 'Топливозаправщик',
+            "CARD": "Топливная карта",
+            "TGBOT": "Телеграм-бот",
+            "TRUCK": "Топливозаправщик",
         }
         return source_map.get(source, source)
     
@@ -125,10 +125,10 @@ class FuelRecordGoogleSheetsService:
                 success_count += 1
         
         return {
-            'success': True,
-            'synced_count': success_count,
-            'total_count': total_count,
-            'message': f'Синхронизировано {success_count} из {total_count} записей'
+            "success": True,
+            "synced_count": success_count,
+            "total_count": total_count,
+            "message": f"Синхронизировано {success_count} из {total_count} записей"
         }
     
     async def sync_all_records(self) -> dict:
@@ -173,9 +173,9 @@ class FuelRecordGoogleSheetsService:
             )
             
             return {
-                'success': True,
-                'synced_count': len(rows),
-                'message': f'Успешно синхронизировано {len(rows)} записей'
+                "success": True,
+                "synced_count": len(rows),
+                "message": f"Успешно синхронизировано {len(rows)} записей"
             }
             
         except Exception as e:
@@ -186,9 +186,9 @@ class FuelRecordGoogleSheetsService:
                 f"Ошибка массовой синхронизации с Google Sheets: {str(e)}"
             )
             return {
-                'success': False,
-                'synced_count': 0,
-                'error': str(e)
+                "success": False,
+                "synced_count": 0,
+                "error": str(e)
             }
     
     async def get_synced_data(self) -> list[dict]:

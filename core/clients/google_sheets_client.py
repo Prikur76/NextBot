@@ -12,9 +12,9 @@ from gspread.exceptions import APIError
 class GoogleSheetsClient:
     """Клиент для работы с Google Sheets"""
 
-    def __init__(self, spreadsheet_id: str | None = None):
-        self._creds_path = getattr(settings, 'GSHEET_CREDENTIALS_JSON_PATH', None)
-        self.spreadsheet_id = spreadsheet_id or getattr(settings, 'GSHEET_SPREADSHEET_ID', None)
+    def __init__(self):
+        self._creds_path = settings.GSHEET["CREDENTIALS_JSON_PATH"]
+        self.spreadsheet_id = settings.GSHEET["SPREADSHEET_ID"]
         self._client = None
         
         # Московское время

@@ -17,15 +17,10 @@ logger = logging.getLogger(__name__)
 class ElementCarClient:
     """Асинхронный клиент для синхронизации данных автомобилей из 1С:Элемент."""
 
-    def __init__(
-        self,
-        base_url: Optional[str] = None,
-        auth_user: Optional[str] = None,
-        auth_password: Optional[str] = None,
-    ):
-        self.base_url = base_url or getattr(settings, 'ELEMENT_API_URL', '').rstrip('/')
-        self.auth_user = auth_user or getattr(settings, 'ELEMENT_API_USER', '')
-        self.auth_password = auth_password or getattr(settings, 'ELEMENT_API_PASSWORD', '')
+    def __init__(self):
+        self.base_url = settings.ELEMENT_API.get("URL", None)
+        self.auth_user = settings.ELEMENT_API.get("USER", None)
+        self.auth_password = settings.ELEMENT_API.get("PASSWORD", None)
         self.last_sync: Optional[datetime] = None
         self.session: Optional[aiohttp.ClientSession] = None
 
@@ -50,10 +45,10 @@ class ElementCarClient:
         """Получает данные о всех автомобилях из 1С:Элемент с фильтрацией."""
         url = f"{self.base_url}/Car/v1/Get"
         params = {}
-        if inn: params['inn'] = inn
-        if vin: params['vin'] = vin
-        if sts: params['sts'] = sts
-        if num: params['num'] = num
+        if inn: params["inn"] = inn
+        if vin: params["vin"] = vin
+        if sts: params["sts"] = sts
+        if num: params["num"] = num
 
         auth = aiohttp.BasicAuth(self.auth_user, self.auth_password)
         timeout = aiohttp.ClientTimeout(total=60)
@@ -67,13 +62,12 @@ class ElementCarClient:
                 text = await response.text()
                 text = text.strip()
 
-                # Пробуем стандартный JSON
                 try:
                     return json.loads(text)
                 except json.JSONDecodeError:
                     # Если JSON обрезан, построчно пытаемся собрать объекты
                     cars = []
-                    text_clean = re.sub(r'^\[|\]$', '', text).strip()
+                    text_clean = re.sub(r"^\[|\]$", "", text).strip()
                     for line in text_clean.splitlines():
                         line = line.strip().rstrip(",")
                         if line.startswith("{") and line.endswith("}"):
@@ -127,16 +121,16 @@ class ElementCarClient:
                 logger.warning(f"⚠️ Некорректный год выпуска для {code}: {data.get('YearCar')}")
 
             return {
-                'code': code,
-                'state_number': number,
-                'model': str(data.get("Model") or "").strip(),
-                'vin': str(data.get("VIN") or "").strip(),
-                'owner_inn': str(data.get("INN") or ""),
-                'department': str(data.get("Department") or ""),
-                'region_name': str(data.get("Region") or ""),
-                'manufacture_year': year,
-                'is_active': data.get("Activity", True),
-                'status': str(data.get("Status") or ""),
+                "code": code,
+                "state_number": number,
+                "model": str(data.get("Model") or "").strip(),
+                "vin": str(data.get("VIN") or "").strip(),
+                "owner_inn": str(data.get("INN") or ""),
+                "department": str(data.get("Department") or ""),
+                "region_name": str(data.get("Region") or ""),
+                "manufacture_year": year,
+                "is_active": data.get("Activity", True),
+                "status": str(data.get("Status") or ""),
             }
         except Exception as e:
             logger.exception(f"Ошибка маппинга данных для {data.get('Code', 'N/A')}: {e}")
@@ -147,16 +141,16 @@ class ElementCarClient:
         try:
             external_cars = await self.fetch_cars()
             stats = {
-                'created': 0,
-                'updated': 0,
-                'archived': 0,
-                'errors': 0,
-                'regions_created': 0,
-                'regions_updated': 0,
-                'total_processed': len(external_cars),
-                'archived_skipped': 0,
-                'restored': 0,
-                'finished_at': datetime.now().isoformat(),
+                "created": 0,
+                "updated": 0,
+                "archived": 0,
+                "errors": 0,
+                "regions_created": 0,
+                "regions_updated": 0,
+                "total_processed": len(external_cars),
+                "archived_skipped": 0,
+                "restored": 0,
+                "finished_at": datetime.now().isoformat(),
             }
 
             if not external_cars:
@@ -170,42 +164,42 @@ class ElementCarClient:
             for item in external_cars:
                 try:
                     if self._is_archived_car(item):
-                        stats['archived_skipped'] += 1
+                        stats["archived_skipped"] += 1
                         continue
 
                     car_data = self._map_external_to_internal(item)
                     if not car_data:
-                        stats['errors'] += 1
+                        stats["errors"] += 1
                         continue
 
-                    external_codes.add(car_data['code'])
+                    external_codes.add(car_data["code"])
 
                     # Обработка региона
-                    if car_data.get('region_name'):
-                        region_stats = await self._process_region(car_data['region_name'])
-                        stats['regions_created'] += region_stats['created']
-                        stats['regions_updated'] += region_stats['updated']
+                    if car_data.get("region_name"):
+                        region_stats = await self._process_region(car_data["region_name"])
+                        stats["regions_created"] += region_stats["created"]
+                        stats["regions_updated"] += region_stats["updated"]
 
                     # Обновление или создание автомобиля
-                    if car_data['code'] in existing_cars:
-                        update_result = await self._update_car(existing_cars[car_data['code']], car_data)
-                        stats['updated'] += update_result
+                    if car_data["code"] in existing_cars:
+                        update_result = await self._update_car(existing_cars[car_data["code"]], car_data)
+                        stats["updated"] += update_result
                         # Если автомобиль был восстановлен из архива
-                        if update_result == 1 and existing_cars[car_data['code']].is_archived and car_data.get('is_active', True):
-                            stats['restored'] += 1
+                        if update_result == 1 and existing_cars[car_data["code"]].is_archived and car_data.get("is_active", True):
+                            stats["restored"] += 1
                     else:
-                        stats['created'] += await self._create_car(car_data)
+                        stats["created"] += await self._create_car(car_data)
 
                 except Exception as e:
-                    stats['errors'] += 1
+                    stats["errors"] += 1
                     logger.exception(f"Ошибка обработки автомобиля {item.get('Code', 'N/A')}: {e}")
 
-            stats['archived'] += await self._archive_missing_cars(external_codes)
+            stats["archived"] += await self._archive_missing_cars(external_codes)
             self.last_sync = datetime.now()
             
             # Логируем итоги
             logger.info(f"📊 Синхронизация завершена: "
-                       f"создано: {stats['created']}, "
+                       f"создано: {stats["created"]}, "
                        f"обновлено: {stats['updated']}, "
                        f"восстановлено: {stats['restored']}, "
                        f"архивировано: {stats['archived']}")
@@ -229,15 +223,15 @@ class ElementCarClient:
     @sync_to_async
     def _process_region(self, name: str) -> Dict[str, int]:
         region, created = Region.objects.get_or_create(name=name)
-        return {'created': int(created), 'updated': int(not created)}
+        return {"created": int(created), "updated": int(not created)}
 
     @sync_to_async
     def _create_car(self, data: Dict) -> int:
         try:
-            region = Region.objects.filter(name=data['region_name']).first() if data.get('region_name') else None
+            region = Region.objects.filter(name=data["region_name"]).first() if data.get("region_name") else None
             
             # Проверяем, существует ли автомобиль с таким кодом (включая архивные)
-            existing_car = Car.objects.filter(code=data['code']).first()
+            existing_car = Car.objects.filter(code=data["code"]).first()
             if existing_car:
                 logger.info(f"🔄 Автомобиль с кодом {data['code']} уже существует, обновляем...")
                 # Вызываем синхронный метод обновления
@@ -245,16 +239,16 @@ class ElementCarClient:
             
             # Подготавливаем данные
             car_data = {
-                'code': data['code'],
-                'state_number': data['state_number'],
-                'model': data['model'],
-                'vin': data.get('vin') or '',
-                'manufacture_year': data['manufacture_year'],
-                'owner_inn': data.get('owner_inn') or '',
-                'department': data.get('department') or '',
-                'region': region,
-                'is_active': data.get('is_active', True),
-                'status': data.get('status') or '',
+                "code": data["code"],
+                "state_number": data["state_number"],
+                "model": data["model"],
+                "vin": data.get("vin") or "",
+                "manufacture_year": data["manufacture_year"],
+                "owner_inn": data.get("owner_inn") or "",
+                "department": data.get("department") or "",
+                "region": region,
+                "is_active": data.get("is_active", True),
+                "status": data.get("status") or "",
             }
             
             # Создаем автомобиль
@@ -270,14 +264,14 @@ class ElementCarClient:
         """Синхронная версия метода обновления для использования в _create_car"""
         try:
             # Проверяем, нужно ли архивировать автомобиль
-            if not data.get('is_active', True) or (data.get('status') or "").upper() == 'АРХИВ':
+            if not data.get("is_active", True) or (data.get("status") or "").upper() == "АРХИВ":
                 if not car.is_archived:
                     car.archive("Стал архивным в 1С")
                     logger.info(f"📦 Автомобиль {car.code} перемещен в архив")
                 return 0
 
             # Восстанавливаем из архива, если нужно
-            if car.is_archived and data.get('is_active', True) and (data.get('status') or "").upper() != 'АРХИВ':
+            if car.is_archived and data.get("is_active", True) and (data.get("status") or "").upper() != "АРХИВ":
                 car.restore_from_archive()
                 logger.info(f"🔄 Автомобиль {car.code} восстановлен из архива")
 
@@ -285,13 +279,13 @@ class ElementCarClient:
             update_fields = []
             
             # Сравниваем и обновляем поля
-            fields_to_check = ['state_number', 'model', 'vin', 'manufacture_year', 'owner_inn', 'department', 'status', 'is_active']
+            fields_to_check = ["state_number", "model", "vin", "manufacture_year", "owner_inn", "department", "status", "is_active"]
             
             for field in fields_to_check:
                 new_value = data.get(field, getattr(car, field))
                 
                 # Обработка None значений для строковых полей
-                if field in ['vin', 'owner_inn', 'department', 'status', 'state_number', 'model']:
+                if field in ["vin", "owner_inn", "department", "status", "state_number", "model"]:
                     new_value = new_value or ""
                 
                 current_value = getattr(car, field)
@@ -302,12 +296,12 @@ class ElementCarClient:
                     update_fields.append(field)
 
             # Обновление региона
-            if data.get('region_name'):
-                region = Region.objects.filter(name=data['region_name']).first()
+            if data.get("region_name"):
+                region = Region.objects.filter(name=data["region_name"]).first()
                 if car.region != region:
                     car.region = region
                     updated = True
-                    update_fields.append('region')
+                    update_fields.append("region")
 
             if updated:
                 car.save(update_fields=update_fields)
