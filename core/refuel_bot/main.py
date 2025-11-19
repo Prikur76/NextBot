@@ -20,13 +20,13 @@ async def error_handler(update: Update, context):
 
 
 def build_app():
-    token = settings.TELEGRAM_BOT_TOKEN
+    token = settings.TELEGRAM.get("TOKEN", None)
     if not token:
         raise RuntimeError("TELEGRAM_BOT_TOKEN not set in settings")
     
     # Читаем прокси из окружения/настроек (если нужно)
     # Можно использовать HTTPS_PROXY из окружения или свой TELEGRAM_PROXY_URL в .env
-    proxy_url = getattr(settings, "TELEGRAM_PROXY_URL", None) or None
+    proxy_url = settings.TELEGRAM.get("PROXY_URL", None) or None
     request = HTTPXRequest(
         connect_timeout=20.0,   # увеличить время соединения
         read_timeout=40.0,      # чтение ответа
