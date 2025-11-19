@@ -4,8 +4,8 @@ from django.http import HttpResponseRedirect
 from django.urls import path
 from django.utils.html import format_html
 
-from core.models import Region, Zone, FuelRecord
 from core.admin.actions import export_action
+from core.models import Region, Zone, FuelRecord
 from core.services.export_service import ExportService
 from core.services.google_sheets_service import FuelRecordGoogleSheetsService
 
@@ -78,18 +78,13 @@ class FuelRecordAdmin(admin.ModelAdmin):
     fieldsets = (
         ("Основная информация", {
             "fields": (
-                "car", "employee", "liters", "fuel_type", 
-                "source", "filled_at", "approved"
+                "car", "employee", 
+                ("liters", "fuel_type"), 
+                "source", "filled_at", "approved",
+                "notes", "display_info",
+                ("historical_department", "historical_region"),
             )
-        }),
-        ("Данные об авто", {
-            "fields": ("historical_region", "historical_department"),
-            "classes": ("collapse",)
-        }),
-        ("Дополнительная информация", {
-            "fields": ("notes", "display_info"),  #  "efficiency_badge"
-            "classes": ("collapse",)
-        }),
+        }),       
         ("Системная информация", {
             "fields": ("created_at", "updated_at"),
             "classes": ("collapse",)

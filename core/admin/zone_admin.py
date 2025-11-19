@@ -27,14 +27,13 @@ class ZoneAdmin(admin.ModelAdmin):
 
     fieldsets = (
         ("Основная информация", {
-            "fields": ("name", "code", "active")
+            "fields": (("active", "can_archive_display"), ("name", "code"))
         }),
         ("Статистика", {
             "fields": (
                 "regions_count_display",
                 "cars_count_display",
-                "active_cars_count_display",
-                "can_archive_display",
+                "active_cars_count_display"                
             ),
             "classes": ("collapse",),
         }),

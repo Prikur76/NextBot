@@ -35,10 +35,13 @@ class RegionAdmin(admin.ModelAdmin):
     
     fieldsets = (
         ("Основная информация", {
-            "fields": ("name", "short_name", "active")
+            "fields": (
+                ("active", "can_archive_display"), 
+                ("name", "short_name")
+            )
         }),
         ("Статистика", {
-            "fields": ("cars_count_display", "active_cars_count_display", "can_archive_display"),
+            "fields": ("cars_count_display", "active_cars_count_display"),
             "classes": ("collapse",)
         }),
     )
