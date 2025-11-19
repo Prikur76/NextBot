@@ -25,4 +25,4 @@ COPY . /app
 RUN useradd -m appuser && chown -R appuser:appuser /app
 USER appuser
 
-ENTRYPOINT ["/app/entrypoint.sh"]
+ENTRYPOINT ["/app/scripts/entrypoint.sh"]

@@ -82,12 +82,11 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = "nextbot.wsgi.application"
-# ASGI_APPLICATION = "nextbot.asgi.application"
+# WSGI_APPLICATION = "nextbot.wsgi.application"
+ASGI_APPLICATION = "nextbot.asgi.application"
 
 # Database
 DEVELOPMENT_MODE = env.bool("DEVELOPMENT_MODE", True)  # По умолчанию True для разработки
-
 if DEVELOPMENT_MODE:
     DATABASES = {
         "default": {
@@ -96,14 +95,14 @@ if DEVELOPMENT_MODE:
         }
     }
 else:
-    DATABASE_URL = env.str("DATABASE_URL", "")
+    DATABASE_URL = env.str("DATABASE_URL", None)
     if DATABASE_URL:
         DATABASES = {
             "default": dj_database_url.config(
                 default=DATABASE_URL,
                 conn_max_age=600,
                 conn_health_checks=True,
-                ssl_require=False,
+                ssl_require=env.bool("DB_SSL_REQUIRE", True),
             )
         }
     else:
