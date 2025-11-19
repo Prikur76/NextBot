@@ -25,7 +25,7 @@ services:
     labels:
       - "traefik.enable=true"
       # Всё API (не статики) идёт в Gunicorn
-      - "traefik.http.routers.nextbot_app.rule=Host(`${DOMAIN}`)"
+      - "traefik.http.routers.nextbot_app.rule=Host(`${DOMAIN}`) && (!PathPrefix(`/static`) || !PathPrefix(`/media`))"
       - "traefik.http.routers.nextbot_app.entrypoints=websecure"
       - "traefik.http.routers.nextbot_app.tls.certresolver=myresolver"
       - "traefik.http.services.nextbot_app.loadbalancer.server.port=8000"
