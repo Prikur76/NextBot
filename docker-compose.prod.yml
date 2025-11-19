@@ -68,6 +68,8 @@ services:
         condition: service_healthy
     command: python manage.py runbot
     restart: unless-stopped
+    labels:
+      - "traefik.enable=false"
     volumes:
       - ./logs:/app/logs
       - ./local_secrets:/app/local_secrets
@@ -91,6 +93,8 @@ services:
       done
       "
     restart: unless-stopped
+    labels:
+      - "traefik.enable=false"
     volumes:
       - ./logs:/app/logs
       - ./local_secrets:/app/local_secrets
