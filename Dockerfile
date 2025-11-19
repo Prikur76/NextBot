@@ -18,17 +18,20 @@ WORKDIR /app
 COPY requirements.txt /app/
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Create non-root user
+RUN useradd -m appuser
+
 # Copy source
 COPY . /app
 
-# Права на выполнение скриптов
-RUN chmod +x /app/scripts/entrypoint.sh
+# Устанавливаем права на logs и весь /app
+RUN mkdir -p /app/logs && chown -R appuser:appuser /app
 
-# Создаём и даём права на logs
-RUN mkdir -p /app/logs && chown -R appuser:appuser /app/logs
-
-# Non-root user
-RUN useradd -m appuser && chown -R appuser:appuser /app
+# Переходим на non-root пользователя
 USER appuser
+
+# Исполняемые скрипты
+RUN chmod +x /app/scripts/entrypoint.sh
+RUN chmod +x /app/scripts/wait-for-db.py
 
 ENTRYPOINT ["/app/scripts/entrypoint.sh"]
