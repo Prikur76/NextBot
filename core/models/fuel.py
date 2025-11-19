@@ -1,5 +1,5 @@
 from django.db import models
-from django.db.models import Q, Count, Sum, Avg, Max, Min
+from django.db.models import Count, Sum, Avg, Max, Min
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
 from datetime import timedelta
@@ -239,7 +239,7 @@ class FuelRecord(models.Model):
     )
     notes = models.TextField(
         blank=True,
-        verbose_name="Примечания"
+        verbose_name="Комментарий"
     )
     historical_region = models.ForeignKey(
         "core.Region",
