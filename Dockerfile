@@ -26,6 +26,8 @@ COPY . /app
 
 # Устанавливаем права на logs и весь /app
 RUN mkdir -p /app/logs && chown -R appuser:appuser /app
+# Устанавливаем права на static
+RUN mkdir -p /app/staticfiles && chown -R appuser:appuser /app/staticfiles
 
 # Переходим на non-root пользователя
 USER appuser
