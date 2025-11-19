@@ -24,6 +24,9 @@ COPY . /app
 # Права на выполнение скриптов
 RUN chmod +x /app/scripts/entrypoint.sh
 
+# Создаём и даём права на logs
+RUN mkdir -p /app/logs && chown -R appuser:appuser /app/logs
+
 # Non-root user
 RUN useradd -m appuser && chown -R appuser:appuser /app
 USER appuser

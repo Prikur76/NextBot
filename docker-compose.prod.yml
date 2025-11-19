@@ -12,9 +12,6 @@ services:
       --workers 4
       --log-level info
 
-    ports:
-      - "8000:8000"
-
     volumes:
       - static_volume:/app/static
       - media_volume:/app/media
