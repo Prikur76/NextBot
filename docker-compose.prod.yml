@@ -83,8 +83,8 @@ services:
         - --certificatesresolvers.myresolver.acme.tlschallenge=true
 
       ports:
-        - "8080:80"
-        - "8443:443"
+        - "80:80"
+        - "443:443"
 
       volumes:
         - /var/run/docker.sock:/var/run/docker.sock:ro
@@ -92,7 +92,6 @@ services:
         - ./traefik/dynamic.yml:/etc/traefik/dynamic.yml:ro
 
       restart: unless-stopped
-
 
 volumes:
   static_volume:
