@@ -47,8 +47,3 @@ yarn-error.log*
 __pycache__/
 *.py[cod]
 *$py.class
-
-# Local Secrets
-local_secrets/
-
-staticfiles/
