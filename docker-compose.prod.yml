@@ -1,31 +1,5 @@
 services:
-
-  traefik:
-    image: traefik:latest
-    container_name: traefik
-    command:
-      - --api.dashboard=true
-      - --providers.docker=true
-
-      - --entrypoints.web.address=:80
-      - --entrypoints.websecure.address=:443
-
-      - --certificatesresolvers.myresolver.acme.email=${LETSENCRYPT_EMAIL}
-      - --certificatesresolvers.myresolver.acme.storage=/acme/acme.json
-      - --certificatesresolvers.myresolver.acme.tlschallenge=true
-
-    ports:
-      - "8080:80"
-      - "8443:443"
-
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ./traefik/acme:/acme
-      - ./traefik/dynamic.yml:/etc/traefik/dynamic.yml:ro
-
-    restart: unless-stopped
-
-
+ 
   web:
     build: .
     container_name: nextbot_prod
@@ -37,6 +11,9 @@ services:
       --bind 0.0.0.0:8000
       --workers 4
       --log-level info
+
+    ports:
+      - "8000:8000"
 
     volumes:
       - static_volume:/app/static
@@ -53,6 +30,12 @@ services:
 
     restart: unless-stopped
 
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
   bot:
     build: .
     container_name: telegram_bot_prod
@@ -68,13 +51,11 @@ services:
 
   scheduler:
     build: .
-    env_file: .env
     container_name: scheduler_prod
+    env_file: .env    
     depends_on:
       web:
         condition: service_healthy
-
-    entrypoint: ["/bin/sh", "-c"]
     command: >
       /bin/sh -c "
       echo 'Scheduler starting...';
@@ -89,6 +70,32 @@ services:
     volumes:
       - ./logs:/app/logs
       - ./local_secrets:/app/local_secrets
+
+  traefik:
+      image: traefik:latest
+      container_name: traefik
+      command:
+        - --api.dashboard=true
+        - --providers.docker=true
+
+        - --entrypoints.web.address=:80
+        - --entrypoints.websecure.address=:443
+
+        - --certificatesresolvers.myresolver.acme.email=${LETSENCRYPT_EMAIL}
+        - --certificatesresolvers.myresolver.acme.storage=/acme/acme.json
+        - --certificatesresolvers.myresolver.acme.tlschallenge=true
+
+      ports:
+        - "8080:80"
+        - "8443:443"
+
+      volumes:
+        - /var/run/docker.sock:/var/run/docker.sock:ro
+        - ./traefik/acme:/acme
+        - ./traefik/dynamic.yml:/etc/traefik/dynamic.yml:ro
+
+      restart: unless-stopped
+
 
 volumes:
   static_volume:
