@@ -49,7 +49,7 @@ services:
   scheduler:
     build: .
     container_name: scheduler_prod
-    env_file: .env    
+    env_file: .env
     depends_on:
       web:
         condition: service_healthy
