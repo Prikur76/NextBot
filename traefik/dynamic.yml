@@ -1,10 +1,21 @@
 http:
+  routers:
+    # Traefik Dashboard router
+    dashboard:
+      rule: Host(`${DOMAIN_TRAEFIK}`)
+      service: api@internal
+      entryPoints: websecure
+      middlewares:
+        - dashboard-auth
+
   middlewares:
+    # Redirect HTTP → HTTPS (нужен для entrypoint web)
     redirect-to-https:
       redirectScheme:
         scheme: https
         permanent: true
 
+    # Basic auth для dashboard
     dashboard-auth:
       basicAuth:
         users:

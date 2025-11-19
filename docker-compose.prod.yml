@@ -1,54 +1,65 @@
+version: "3.9"
+
 services:
- 
+
   web:
     build: .
     container_name: nextbot_prod
     env_file: .env
-    depends_on:
-      postgres_check:
-        condition: service_started
+
     command: >
-      sh -c "
-      python manage.py migrate --noinput &&
-      python manage.py collectstatic --noinput --clear &&
-      echo '✅ Миграции и статика применены' &&
       gunicorn nextbot.asgi:application
-        -k uvicorn.workers.UvicornWorker
-        --bind 0.0.0.0:8000
-        --workers 4
-        --log-level info
-      "
+      -k uvicorn.workers.UvicornWorker
+      --bind 0.0.0.0:8000
+      --workers 4
+      --log-level info
+
     volumes:
+      - static_volume:/app/static
+      - media_volume:/app/media
       - ./logs:/app/logs
       - ./local_secrets:/app/local_secrets
-      - static_volume:/app/staticfiles
-      - media_volume:/app/media
+
     restart: unless-stopped
+
+    labels:
+      - "traefik.enable=true"
+      # Всё API (не статики) идёт в Gunicorn
+      - "traefik.http.routers.nextbot_app.rule=Host(`${DOMAIN}`) && PathPrefix(`/api`, `/admin`, `/auth`, `/health`)"
+      - "traefik.http.routers.nextbot_app.entrypoints=websecure"
+      - "traefik.http.routers.nextbot_app.tls.certresolver=myresolver"
+      - "traefik.http.services.nextbot_app.loadbalancer.server.port=8000"
+
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health/"]
       interval: 30s
       timeout: 10s
       retries: 3
-      start_period: 60s
 
-  # === Проверка доступности PostgreSQL (без запуска сервера) ===
-  postgres_check:
-    image: postgres:15
-    environment:
-      POSTGRES_HOST: ${POSTGRES_HOST}
-      POSTGRES_PORT: ${POSTGRES_PORT:-5432}
-      PGPASSWORD: ${POSTGRES_PASSWORD}
-    command: >
-      sh -c "
-      until pg_isready -h $${POSTGRES_HOST} -p $${POSTGRES_PORT}; do
-        echo '⏳ Ожидание PostgreSQL...';
-        sleep 5;
-      done;
-      echo '✅ PostgreSQL доступна'
-      "
-    restart: "no"
 
-  # === Telegram Bot ===
+  # -----------------------------
+  # NGINX для статики и медиа
+  # -----------------------------
+  nginx:
+    image: nginx:1.27-alpine
+    container_name: nginx_prod
+
+    volumes:
+      - static_volume:/static
+      - media_volume:/media
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+
+    restart: unless-stopped
+
+    labels:
+      - "traefik.enable=true"
+      # Статика и медиа идут через nginx, а не через Django
+      - "traefik.http.routers.nextbot_static.rule=Host(`${DOMAIN}`)"
+      - "traefik.http.routers.nextbot_static.entrypoints=websecure"
+      - "traefik.http.routers.nextbot_static.tls.certresolver=myresolver"
+      - "traefik.http.services.nextbot_static.loadbalancer.server.port=80"
+
+
   bot:
     build: .
     container_name: telegram_bot_prod
@@ -57,12 +68,12 @@ services:
       web:
         condition: service_healthy
     command: python manage.py runbot
+    restart: unless-stopped
     volumes:
       - ./logs:/app/logs
       - ./local_secrets:/app/local_secrets
-    restart: unless-stopped
 
-  # === Планировщик задач ===
+
   scheduler:
     build: .
     container_name: scheduler_prod
@@ -74,59 +85,47 @@ services:
       /bin/sh -c "
       echo 'Scheduler starting...';
       while true; do
-        echo '[Scheduler] Running sync_cars_with_element';
+        echo '[Scheduler] Running sync...';
         python manage.py sync_cars_with_element;
-        sleep $(( ${SYNC_CARS_SCHEDULE_MINUTES:-30} * 60 ));
+        echo '[Scheduler] Sleeping for 5 minutes...';
+        sleep 300;
       done
       "
+    restart: unless-stopped
     volumes:
       - ./logs:/app/logs
       - ./local_secrets:/app/local_secrets
-    restart: unless-stopped
 
-  # === Раздача статики через Nginx ===
-  static-server:
-    image: nginx:alpine
-    container_name: static_files_server
-    volumes:
-      - static_volume:/usr/share/nginx/html/static:ro
-    command: nginx -g 'daemon off;'
-    restart: unless-stopped
 
-  # === Обратный прокси + HTTPS (Traefik) ===
+  # -----------------------------
+  # TRAEFIK — SSL + Routing
+  # -----------------------------
   traefik:
-    image: traefik:v3.1
+    image: traefik:latest
     container_name: traefik
+
     command:
       - --api.dashboard=true
       - --providers.docker=true
+
       - --entrypoints.web.address=:80
       - --entrypoints.websecure.address=:443
+
       - --certificatesresolvers.myresolver.acme.email=${LETSENCRYPT_EMAIL}
       - --certificatesresolvers.myresolver.acme.storage=/acme/acme.json
       - --certificatesresolvers.myresolver.acme.tlschallenge=true
-      - --providers.docker.exposedbydefault=false
+
     ports:
       - "80:80"
       - "443:443"
+
     volumes:
       - /var/run/docker.sock:/var/run/docker.sock:ro
       - ./traefik/acme:/acme
-    labels:
-      # Роутер: статика
-      - "traefik.http.routers.static.rule=PathPrefix(`/static/`)"
-      - "traefik.http.routers.static.entrypoints=websecure"
-      - "traefik.http.routers.static.service=static-service"
-      - "traefik.http.services.static-service.loadbalancer.server.port=80"
-      - "traefik.http.services.static-service.loadbalancer.server.scheme=http"
+      - ./traefik/dynamic.yml:/etc/traefik/dynamic.yml:ro
 
-      # Роутер: админка и API
-      - "traefik.http.routers.django.rule=Host(`${DOMAIN}`)"
-      - "traefik.http.routers.django.entrypoints=websecure"
-      - "traefik.http.routers.django.tls.certresolver=myresolver"
-      - "traefik.http.routers.django.service=django-service"
-      - "traefik.http.services.django-service.loadbalancer.server.port=8000"
     restart: unless-stopped
+
 
 volumes:
   static_volume:
