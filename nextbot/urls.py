@@ -31,7 +31,7 @@ urlpatterns = [
 
 if settings.DEBUG:
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
-    
+        
 
 # Обработчики ошибок 403, 404, 500 
 def handler403(request, exception=None):
