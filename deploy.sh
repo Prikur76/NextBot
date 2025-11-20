@@ -51,7 +51,15 @@ docker system prune -f
 echo ""
 echo "🏃 Checking health of services..." | tee -a $LOGFILE
 sleep 5
-docker ps | grep $DOMAIN
+
+WEB_STATUS=$($COMPOSE ps -a | grep nextbot_web | awk '{print $4}')
+
+if [[ "$WEB_STATUS" != "healthy" ]]; then
+    echo "❌ Web container is not healthy!"
+    exit 1
+fi
+
+echo "✅ Web container is healthy."
 
 echo ""
 echo "🔐 Obtaining / Renewing SSL certificates..." | tee -a $LOGFILE
