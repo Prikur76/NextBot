@@ -57,24 +57,40 @@ $COMPOSE up -d
 
 
 ############################################
-# WAIT FOR WEB TO BE HEALTHY
+# WAIT FOR WEB TO BE HEALTHY (robust)
 ############################################
 echo ""
 echo "⏳ Waiting for web to become healthy..." | tee -a $LOGFILE
 
+# Получаем container id для сервиса web через docker compose (надёжно)
+CONTAINER_ID=$($COMPOSE ps -q web || true)
+
+if [[ -z "$CONTAINER_ID" ]]; then
+  echo "❌ Cannot find container id for service 'web' (compose ps -q web returned empty)" | tee -a $LOGFILE
+  docker compose -f docker-compose.prod.yml ps | tee -a $LOGFILE
+  exit 1
+fi
+
+# Проверяем status.health 30 раз с паузой
+STATUS=""
 for i in {1..30}; do
-    STATUS=$(docker inspect --format='{{json .State.Health.Status}}' nextbot_web || echo '"unknown"')
-    if [[ $STATUS == "\"healthy\"" ]]; then
-        echo "✔ Web is healthy!" | tee -a $LOGFILE
-        break
-    fi
-    echo "Waiting... ($i/30) status = $STATUS" | tee -a $LOGFILE
-    sleep 2
+  STATUS=$(docker inspect --format='{{.State.Health.Status}}' "$CONTAINER_ID" 2>/dev/null || echo "unknown")
+  echo "Check $i: web health status = $STATUS" | tee -a $LOGFILE
+  if [[ "$STATUS" == "healthy" ]]; then
+    echo "✔ Web is healthy!" | tee -a $LOGFILE
+    break
+  fi
+  sleep 2
 done
 
-if [[ $STATUS != "\"healthy\"" ]]; then
-    echo "❌ Web failed to become healthy!" | tee -a $LOGFILE
-    exit 1
+if [[ "$STATUS" != "healthy" ]]; then
+  echo "❌ Web failed to become healthy (status=$STATUS)." | tee -a $LOGFILE
+  echo "Dumping container state:" | tee -a $LOGFILE
+  docker inspect "$CONTAINER_ID" | tee -a $LOGFILE
+  # Дополнительная опция: проверить HTTP /health через nginx (если настроен)
+  echo "Trying HTTP healthcheck via nginx..." | tee -a $LOGFILE
+  docker compose -f docker-compose.prod.yml exec --index 1 nginx sh -c 'curl -sS -I http://web:8000/health/ || true' | tee -a $LOGFILE
+  exit 1
 fi
 
 
