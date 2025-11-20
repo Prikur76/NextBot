@@ -10,7 +10,7 @@ services:
       - static_volume:/app/static
       - media_volume:/app/media
     restart: unless-stopped
-
+    
   nginx:
     image: nginx:1.27-alpine
     container_name: nextbot_nginx
@@ -34,6 +34,43 @@ services:
       - ./certbot/www:/var/www/certbot
       - /etc/letsencrypt:/etc/letsencrypt
 
+  bot:
+    build: .
+    container_name: telegram_bot_prod
+    env_file: .env
+    depends_on:
+      web:
+        condition: service_healthy
+    command: python manage.py runbot
+    restart: unless-stopped
+    volumes:
+      - ./logs:/app/logs
+      - ./local_secrets:/app/local_secrets
+
+  scheduler:
+    build: .
+    container_name: scheduler_prod
+    env_file: .env
+    depends_on:
+      web:
+        condition: service_healthy
+    command: >
+      /bin/sh -c "
+      echo 'Scheduler starting...';
+      while true; do
+        echo '[Scheduler] Running sync...';
+        python manage.py sync_cars_with_element;
+        echo '[Scheduler] Sleeping for 5 minutes...';
+        sleep 300;
+      done
+      "
+    restart: unless-stopped
+    volumes:
+      - ./logs:/app/logs
+      - ./local_secrets:/app/local_secrets
+
 volumes:
   static_volume:
   media_volume:
+  logs:
+  local_secrets:
