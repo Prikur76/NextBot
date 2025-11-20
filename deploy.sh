@@ -27,20 +27,6 @@ rollback() {
 trap rollback ERR
 
 ############################################
-# CHECK VOLUME PERMISSIONS
-############################################
-echo "🔍 Checking volume permissions..." | tee -a $LOGFILE
-
-# logs: writable
-mkdir -p ./logs
-chmod 777 ./logs
-echo "✔ ./logs is writable" | tee -a $LOGFILE
-
-# local_secrets: read-only for container
-mkdir -p ./local_secrets
-echo "✔ ./local_secrets exists (read-only for container user)" | tee -a $LOGFILE
-
-############################################
 # UPDATE CODE
 ############################################
 echo "🔄 Pulling latest code..." | tee -a $LOGFILE

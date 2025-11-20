@@ -18,21 +18,23 @@ WORKDIR /app
 COPY requirements.txt /app/
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Create non-root user
-RUN useradd -m appuser
+# Create non-root user with UID/GID=1000
+RUN groupadd -g 1000 appuser \
+    && useradd -m -u 1000 -g 1000 appuser
 
 # Copy source
 COPY . /app
 
-# Устанавливаем права на /app и подпапки
+# Create necessary directories and set permissions
 RUN mkdir -p /app/logs /app/local_secrets /app/static /app/media \
-    && chown -R appuser:appuser /app \
-    && chmod -R 775 /app/logs /app/local_secrets /app/static /app/media
+    && chown -R appuser:appuser /app/logs \
+    && chmod -R 755 /app/local_secrets \
+    && chown -R appuser:appuser /app/static /app/media
 
-# Копируем entrypoint внутрь /app/scripts и даём права
+# Make entrypoint executable
 RUN chmod +x /app/scripts/entrypoint.prod.sh
 
-# Переключаемся на appuser
+# Switch to appuser
 USER appuser
 
 # ENTRYPOINT

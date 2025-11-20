@@ -15,9 +15,8 @@ services:
     volumes:
       - static_volume:/app/static
       - media_volume:/app/media
-      - ./logs:/app/logs:rw
+      - ./logs:/app/logs
       - ./local_secrets:/app/local_secrets:ro
-    user: "1000:1000" # UID:GID appuser  
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:8000/health/"]
@@ -62,9 +61,9 @@ services:
     command: python manage.py runbot
     restart: unless-stopped
     volumes:
-      - ./logs:/app/logs:rw
+      - ./logs:/app/logs
       - ./local_secrets:/app/local_secrets:ro
-    user: "1000:1000"
+    
 
   scheduler:
     build:
@@ -89,10 +88,9 @@ services:
       "
     restart: unless-stopped
     volumes:
-      - ./logs:/app/logs:rw
+      - ./logs:/app/logs
       - ./local_secrets:/app/local_secrets:ro
-    user: "1000:1000"
-
+    
 volumes:
   static_volume:
   media_volume:
