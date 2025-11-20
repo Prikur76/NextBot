@@ -80,6 +80,45 @@ if [[ "$STATUS" != "healthy" ]]; then
 fi
 
 ############################################
+# CHECK DATABASE CONNECTION
+############################################
+echo ""
+echo "🗄 Checking Postgres database connection..." | tee -a $LOGFILE
+
+MAX_TRIES=10
+SLEEP_SEC=5
+DB_OK=0
+
+for i in $(seq 1 $MAX_TRIES); do
+    echo "Check $i: Testing DB connection..." | tee -a $LOGFILE
+
+    $COMPOSE exec -T web python -c "
+import sys, psycopg2, os
+try:
+    conn = psycopg2.connect(
+        dbname=os.environ.get('POSTGRES_DB'),
+        user=os.environ.get('POSTGRES_USER'),
+        password=os.environ.get('POSTGRES_PASSWORD'),
+        host=os.environ.get('POSTGRES_HOST'),
+        port=int(os.environ.get('POSTGRES_PORT', 5432))
+    )
+    conn.close()
+except Exception as e:
+    sys.exit(1)
+" && DB_OK=1 && break
+
+    echo "⚠ DB not reachable yet, waiting $SLEEP_SEC sec..." | tee -a $LOGFILE
+    sleep $SLEEP_SEC
+done
+
+if [[ "$DB_OK" != "1" ]]; then
+    echo "❌ Cannot connect to Postgres database after $MAX_TRIES attempts." | tee -a $LOGFILE
+    exit 1
+fi
+
+echo "✔ Database connection OK!" | tee -a $LOGFILE
+
+############################################
 # APPLY MIGRATIONS
 ############################################
 echo ""
@@ -120,7 +159,7 @@ done
 # SSL CERTIFICATES
 ############################################
 echo ""
-echo "🔐 Renewing SSL certificates (won't break deployment if fails)..." | tee -a $LOGFILE
+echo "🔐 Renewing SSL certificates (will not break deployment if fails)..." | tee -a $LOGFILE
 $COMPOSE run --rm certbot renew --non-interactive || echo "⚠ SSL renewal failed or rate-limited, continuing..." | tee -a $LOGFILE
 
 ############################################
