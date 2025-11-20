@@ -4,7 +4,7 @@ import logging
 from django.conf import settings
 from telegram import Update
 from telegram.ext import ApplicationBuilder, TypeHandler
-from telegram.request import HTTPXRequest
+# from telegram.request import HTTPXRequest
 
 from core.refuel_bot.handlers.start import start_handler, help_handler, help_message_handler
 from core.refuel_bot.handlers.fuel_input import fuel_conv_handler, fuel_command_handler
@@ -28,15 +28,15 @@ def build_app():
     # Можно использовать HTTPS_PROXY из окружения или свой TELEGRAM_PROXY_URL в .env
     proxy_url = settings.TELEGRAM.get("PROXY_URL", None)
     
-    request = HTTPXRequest(
-        connect_timeout=20.0,   # увеличить время соединения
-        read_timeout=40.0,      # чтение ответа
-        write_timeout=20.0,     # отправка запроса
-        pool_timeout=5.0,       # ожидание свободного соединения
-        proxy=proxy_url         # 'http://host:port' или 'socks5://user:pass@host:port'
-    )
+    # request = HTTPXRequest(
+    #     connect_timeout=20.0,   # увеличить время соединения
+    #     read_timeout=40.0,      # чтение ответа
+    #     write_timeout=20.0,     # отправка запроса
+    #     pool_timeout=5.0,       # ожидание свободного соединения
+    #     proxy=proxy_url         # 'http://host:port' или 'socks5://user:pass@host:port'
+    # )
 
-    app = ApplicationBuilder().token(token).request(request).build()
+    app = ApplicationBuilder().token(token).build() #.request(request)
     app.add_handler(TypeHandler(Update, access_middleware), group=-1)
 
     # Команды/кнопки
