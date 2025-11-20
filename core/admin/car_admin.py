@@ -3,7 +3,6 @@ from django.http import HttpResponseRedirect
 from django.urls import path
 from django.utils import timezone
 from django.utils.html import format_html
-from django.db.models import Count
 
 from core.models import Car
 from core.admin.actions import export_action
