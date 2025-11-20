@@ -43,9 +43,12 @@ $COMPOSE run --rm certbot certonly \
   --agree-tos \
   --no-eff-email
 
+
 echo ""
-echo "♻️ Reloading nginx..."
-$COMPOSE exec nginx nginx -s reload
+# echo "♻️ Reloading nginx..."
+# $COMPOSE exec nginx nginx -s reload
+echo "🔄 Restarting nginx to apply new SSL certs..."
+$COMPOSE restart nginx
 
 echo ""
 echo "====================================================="
