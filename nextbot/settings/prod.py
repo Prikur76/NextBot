@@ -21,7 +21,7 @@ if not DATABASE_URL:
 DATABASES = {
     "default": dj_database_url.parse(
         DATABASE_URL,
-        engine="django.db.backends.postgresql_psycopg2",
+        engine="django.db.backends.postgresql",
         conn_max_age=600,
         conn_health_checks=True,
         ssl_require=env.bool("DB_SSL_REQUIRE", True),
