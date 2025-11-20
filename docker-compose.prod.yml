@@ -90,3 +90,4 @@ volumes:
   static_volume:
   media_volume:
   local_secrets:
+  logs:
