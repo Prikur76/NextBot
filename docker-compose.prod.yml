@@ -35,7 +35,9 @@ services:
       - /etc/letsencrypt:/etc/letsencrypt
 
   bot:
-    build: .
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.prod
     container_name: telegram_bot_prod
     env_file: .env
     depends_on:
@@ -48,7 +50,9 @@ services:
       - ./local_secrets:/app/local_secrets
 
   scheduler:
-    build: .
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.prod
     container_name: scheduler_prod
     env_file: .env
     depends_on:
