@@ -25,7 +25,9 @@ RUN useradd -m appuser
 COPY . /app
 
 # Устанавливаем права на /app и подпапки
-RUN mkdir -p /app/logs /app/local_secrets /app/static /app/media && chown -R appuser:appuser /app
+RUN mkdir -p /app/logs /app/local_secrets /app/static /app/media \
+    && chown -R appuser:appuser /app \
+    && chmod -R 775 /app/logs /app/local_secrets /app/static /app/media
 
 # Копируем entrypoint внутрь /app/scripts и даём права
 RUN chmod +x /app/scripts/entrypoint.prod.sh
