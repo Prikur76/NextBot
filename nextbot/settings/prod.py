@@ -10,7 +10,7 @@ from .base import *
 DEBUG = False
 
 # Hosts - require explicit value in env
-ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=["refuel.txnxt.ru",], delimiter=",")
+ALLOWED_HOSTS = env.list("ALLOWED_HOSTS", default=["127.0.0.1", "localhost",], delimiter=",")
 
 # Database
 DATABASE_URL = env.str("DATABASE_URL", None)
@@ -21,6 +21,7 @@ if not DATABASE_URL:
 DATABASES = {
     "default": dj_database_url.parse(
         DATABASE_URL,
+        engine="django.db.backends.postgresql_psycopg2",
         conn_max_age=600,
         conn_health_checks=True,
         ssl_require=env.bool("DB_SSL_REQUIRE", True),
