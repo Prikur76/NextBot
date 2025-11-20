@@ -1,135 +1,39 @@
 services:
 
   web:
-    build: .
-    container_name: nextbot_prod
+    build:
+      context: .
+      dockerfile: docker/Dockerfile.prod
+    container_name: nextbot_web
     env_file: .env
-
-    command: >
-      gunicorn nextbot.asgi:application
-      -k uvicorn.workers.UvicornWorker
-      --bind 0.0.0.0:8000
-      --workers 4
-      --log-level info
-
     volumes:
       - static_volume:/app/static
       - media_volume:/app/media
-      - ./logs:/app/logs
-      - ./local_secrets:/app/local_secrets
-
     restart: unless-stopped
 
-    labels:
-      - "traefik.enable=true"
-      # Всё API (не статики) идёт в Gunicorn
-      - "traefik.http.routers.nextbot_app.rule=Host(`${DOMAIN}`) && (!PathPrefix(`/static`) || !PathPrefix(`/media`))"
-      - "traefik.http.routers.nextbot_app.entrypoints=websecure"
-      - "traefik.http.routers.nextbot_app.tls.certresolver=myresolver"
-      - "traefik.http.services.nextbot_app.loadbalancer.server.port=8000"
-
-    healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health/"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-
-
-  # -----------------------------
-  # NGINX для статики и медиа
-  # -----------------------------
   nginx:
     image: nginx:1.27-alpine
-    container_name: nginx_prod
-
+    container_name: nextbot_nginx
+    ports:
+      - "80:80"
+      - "443:443"
     volumes:
       - static_volume:/static
       - media_volume:/media
       - ./nginx/conf.d:/etc/nginx/conf.d:ro
-
-    restart: unless-stopped
-
-    labels:
-      - "traefik.enable=true"
-      - "traefik.http.routers.nextbot_static.rule=Host(`${DOMAIN}`) && (PathPrefix(`/static`) || PathPrefix(`/media`))"
-      - "traefik.http.routers.nextbot_static.entrypoints=websecure"
-      - "traefik.http.routers.nextbot_static.tls.certresolver=myresolver"
-      - "traefik.http.services.nextbot_static.loadbalancer.server.port=80"
-
-
-  bot:
-    build: .
-    container_name: telegram_bot_prod
-    env_file: .env
+      - ./certbot/www:/var/www/certbot
+      - /etc/letsencrypt:/etc/letsencrypt
     depends_on:
-      web:
-        condition: service_healthy
-    command: python manage.py runbot
-    restart: unless-stopped
-    labels:
-      - "traefik.enable=false"
-    volumes:
-      - ./logs:/app/logs
-      - ./local_secrets:/app/local_secrets
-
-
-  scheduler:
-    build: .
-    container_name: scheduler_prod
-    env_file: .env
-    depends_on:
-      web:
-        condition: service_healthy
-    command: >
-      /bin/sh -c "
-      echo 'Scheduler starting...';
-      while true; do
-        echo '[Scheduler] Running sync...';
-        python manage.py sync_cars_with_element;
-        echo '[Scheduler] Sleeping for 5 minutes...';
-        sleep 300;
-      done
-      "
-    restart: unless-stopped
-    labels:
-      - "traefik.enable=false"
-    volumes:
-      - ./logs:/app/logs
-      - ./local_secrets:/app/local_secrets
-
-
-  # -----------------------------
-  # TRAEFIK — SSL + Routing
-  # -----------------------------
-  traefik:
-    image: traefik:latest
-    container_name: traefik
-
-    command:
-      - --api.dashboard=true
-      - --providers.docker=true
-
-      - --entrypoints.web.address=:80
-      - --entrypoints.websecure.address=:443
-
-      - --certificatesresolvers.myresolver.acme.email=${LETSENCRYPT_EMAIL}
-      - --certificatesresolvers.myresolver.acme.storage=/acme/acme.json
-      - --certificatesresolvers.myresolver.acme.tlschallenge=true
-
-    ports:
-      - "80:80"
-      - "443:443"
-
-    volumes:
-      - /var/run/docker.sock:/var/run/docker.sock:ro
-      - ./traefik/acme:/acme
-      - ./traefik/dynamic.yml:/etc/traefik/dynamic.yml:ro
-
+      - web
     restart: unless-stopped
 
+  certbot:
+    image: certbot/certbot
+    container_name: nextbot_certbot
+    volumes:
+      - ./certbot/www:/var/www/certbot
+      - /etc/letsencrypt:/etc/letsencrypt
 
 volumes:
   static_volume:
   media_volume:
-  logs:
-  local_secrets:
