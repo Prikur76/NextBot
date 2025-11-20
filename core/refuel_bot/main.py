@@ -26,7 +26,8 @@ def build_app():
     
     # Читаем прокси из окружения/настроек (если нужно)
     # Можно использовать HTTPS_PROXY из окружения или свой TELEGRAM_PROXY_URL в .env
-    proxy_url = settings.TELEGRAM.get("PROXY_URL", None) or None
+    proxy_url = settings.TELEGRAM.get("PROXY_URL", None)
+    
     request = HTTPXRequest(
         connect_timeout=20.0,   # увеличить время соединения
         read_timeout=40.0,      # чтение ответа
