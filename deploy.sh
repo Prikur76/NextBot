@@ -1,68 +1,131 @@
 #!/bin/bash
-set -e
+set -Eeuo pipefail
 
-# Загружаем переменные окружения из .env (DOMAIN, LETSENCRYPT_EMAIL)
-export $(grep -v '^#' .env | xargs)
-
+LOGFILE="deploy.log"
 COMPOSE="docker compose -f docker-compose.prod.yml"
 
-echo "====================================================="
-echo " 🚀 Starting Deployment for $DOMAIN" | tee -a $LOGFILE
-echo "====================================================="
+# Load environment variables
+export $(grep -v '^#' .env | xargs)
 
+echo "=====================================================" | tee -a $LOGFILE
+echo " 🚀 Starting Deployment for $DOMAIN" | tee -a $LOGFILE
+echo "=====================================================" | tee -a $LOGFILE
+
+
+############################################
+# ROLLBACK
+############################################
 rollback() {
-    echo "[ERROR] Deployment failed! Rolling back..." | tee -a $LOGFILE
-    $COMPOSE down
-    git reset --hard HEAD
-    echo "Rollback complete." | tee -a $LOGFILE
+    echo ""
+    echo "❗ ERROR: Deployment failed! Rolling back..." | tee -a $LOGFILE
+
+    # Stop and remove containers
+    $COMPOSE down -v || true
+
+    # Reset code
+    git reset --hard HEAD~1 || true
+
+    echo "✔ Rollback complete." | tee -a $LOGFILE
     exit 1
 }
 
 trap rollback ERR
 
+
+############################################
+# UPDATE CODE
+############################################
 echo "🔄 Pulling latest code..." | tee -a $LOGFILE
-git fetch --all
+git fetch origin
 git reset --hard origin/main
 
-echo ""
-echo "🛠 Building images..." | tee -a $LOGFILE
-$COMPOSE build --no-cache
 
+############################################
+# BUILD IMAGES
+############################################
+echo ""
+echo "🛠 Building Docker images..." | tee -a $LOGFILE
+$COMPOSE build
+
+
+############################################
+# START SERVICES
+############################################
 echo ""
 echo "🚀 Starting containers..." | tee -a $LOGFILE
 $COMPOSE up -d
 
-echo ""
-echo "⏳ Waiting for web to start..." | tee -a $LOGFILE
-sleep 5
 
+############################################
+# WAIT FOR WEB TO BE HEALTHY
+############################################
+echo ""
+echo "⏳ Waiting for web to become healthy..." | tee -a $LOGFILE
+
+for i in {1..30}; do
+    STATUS=$(docker inspect --format='{{json .State.Health.Status}}' nextbot_web || echo '"unknown"')
+    if [[ $STATUS == "\"healthy\"" ]]; then
+        echo "✔ Web is healthy!" | tee -a $LOGFILE
+        break
+    fi
+    echo "Waiting... ($i/30) status = $STATUS" | tee -a $LOGFILE
+    sleep 2
+done
+
+if [[ $STATUS != "\"healthy\"" ]]; then
+    echo "❌ Web failed to become healthy!" | tee -a $LOGFILE
+    exit 1
+fi
+
+
+############################################
+# APPLY MIGRATIONS
+############################################
 echo ""
 echo "🗄 Applying migrations..." | tee -a $LOGFILE
 $COMPOSE exec web python manage.py migrate --noinput
 
+
+############################################
+# COLLECT STATIC FILES
+############################################
 echo ""
 echo "📦 Collecting static files..." | tee -a $LOGFILE
 $COMPOSE exec web python manage.py collectstatic --noinput
 
+
+############################################
+# CLEANUP
+############################################
 echo ""
 echo "🧹 Cleaning unused docker resources..." | tee -a $LOGFILE
-docker system prune -f
+docker system prune -f >/dev/null 2>&1 || true
 
+
+############################################
+# CHECK THAT ALL MAIN SERVICES ARE RUNNING
+############################################
 echo ""
-echo "🏃 Checking health of services..." | tee -a $LOGFILE
-sleep 5
+echo "🏃 Checking running services..." | tee -a $LOGFILE
 
-WEB_STATUS=$($COMPOSE ps -a | grep nextbot_web | awk '{print $4}')
+required=("nextbot_web" "nextbot_nginx" "telegram_bot_prod" "scheduler_prod")
 
-if [[ "$WEB_STATUS" != "healthy" ]]; then
-    echo "❌ Web container is not healthy!"
-    exit 1
-fi
+for svc in "${required[@]}"; do
+    if docker ps --format '{{.Names}}' | grep -q "^$svc$"; then
+        echo "✔ $svc is running" | tee -a $LOGFILE
+    else
+        echo "❌ $svc is NOT running!" | tee -a $LOGFILE
+        exit 1
+    fi
+done
 
-echo "✅ Web container is healthy."
 
+############################################
+# SSL CERTIFICATES
+############################################
 echo ""
 echo "🔐 Obtaining / Renewing SSL certificates..." | tee -a $LOGFILE
+
 $COMPOSE run --rm certbot certonly \
   --webroot -w /var/www/certbot \
   -d $DOMAIN \
@@ -71,11 +134,18 @@ $COMPOSE run --rm certbot certonly \
   --no-eff-email
 
 
+############################################
+# RELOAD NGINX
+############################################
 echo ""
-echo "🔄 Restarting nginx to apply new SSL certs..." | tee -a $LOGFILE
+echo "🔄 Reloading nginx to apply certs..." | tee -a $LOGFILE
 $COMPOSE restart nginx
 
+
+############################################
+# DONE!
+############################################
 echo ""
-echo "====================================================="
+echo "=====================================================" | tee -a $LOGFILE
 echo " ✨ Deployment complete!" | tee -a $LOGFILE
 echo "=====================================================" | tee -a $LOGFILE
