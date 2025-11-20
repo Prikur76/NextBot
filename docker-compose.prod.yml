@@ -6,6 +6,8 @@ services:
       dockerfile: docker/Dockerfile.prod
     container_name: nextbot_web
     env_file: .env
+    environment:
+      DJANGO_SETTINGS_MODULE: nextbot.settings.prod
     command: >
       gunicorn nextbot.asgi:application
       -k uvicorn.workers.UvicornWorker
