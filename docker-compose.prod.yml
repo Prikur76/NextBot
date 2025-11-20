@@ -50,7 +50,7 @@ services:
   bot:
     build:
       context: .
-      dockerfile: docker/Dockerfile.prod
+      dockerfile: docker/Dockerfile.bot
     container_name: telegram_bot_prod
     env_file: .env
     environment:
@@ -71,7 +71,7 @@ services:
     container_name: scheduler_prod
     env_file: .env
     environment:
-      DJANGO_SETTINGS_MODULE: nextbot.settings.prod    
+      DJANGO_SETTINGS_MODULE: nextbot.settings.prod          
     depends_on:
       web:
         condition: service_healthy
