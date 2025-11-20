@@ -16,7 +16,7 @@ services:
       - static_volume:/app/static
       - media_volume:/app/media
       - ./logs:/app/logs:rw
-      - ./local_secrets:/app/local_secrets:rw
+      - ./local_secrets:/app/local_secrets:ro
     user: "1000:1000" # UID:GID appuser  
     restart: unless-stopped
     healthcheck:
@@ -63,7 +63,7 @@ services:
     restart: unless-stopped
     volumes:
       - ./logs:/app/logs:rw
-      - ./local_secrets:/app/local_secrets:rw
+      - ./local_secrets:/app/local_secrets:ro
     user: "1000:1000"
 
   scheduler:
@@ -90,7 +90,7 @@ services:
     restart: unless-stopped
     volumes:
       - ./logs:/app/logs:rw
-      - ./local_secrets:/app/local_secrets:rw
+      - ./local_secrets:/app/local_secrets:ro
     user: "1000:1000"
 
 volumes:
