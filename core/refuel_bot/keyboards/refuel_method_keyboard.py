@@ -9,6 +9,8 @@ class RefuelMethodKeyboard:
                 InlineKeyboardButton("ТГ-бот", callback_data="refuel_method:tg_bot"),
                 InlineKeyboardButton("Карта", callback_data="refuel_method:fuel_card")                
             ],
-            InlineKeyboardButton("Топливозаправщик", callback_data="refuel_method:truck")
+            [
+                InlineKeyboardButton("Топливозаправщик", callback_data="refuel_method:truck")
+            ],
         ]
         return InlineKeyboardMarkup(keyboard)
