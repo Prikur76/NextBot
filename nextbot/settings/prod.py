@@ -24,7 +24,7 @@ DATABASES = {
         engine="django.db.backends.postgresql",
         conn_max_age=600,
         conn_health_checks=True,
-        ssl_require=env.bool("DB_SSL_REQUIRE", True),
+        ssl_require=env.bool("DB_SSL_REQUIRE", False),
     )
 }
 
