@@ -159,8 +159,29 @@ done
 # SSL CERTIFICATES
 ############################################
 echo ""
-echo "🔐 Renewing SSL certificates (will not break deployment if fails)..." | tee -a $LOGFILE
-$COMPOSE run --rm certbot renew --non-interactive || echo "⚠ SSL renewal failed or rate-limited, continuing..." | tee -a $LOGFILE
+echo "🔐 Checking / obtaining SSL certificates..." | tee -a $LOGFILE
+
+CERT_PATH="/etc/letsencrypt/live/$DOMAIN/fullchain.pem"
+
+# Если сертификата нет, выдаём первый раз
+if [ ! -f "$CERT_PATH" ]; then
+    echo "⚠ Certificate not found. Issuing a new one via certbot..." | tee -a $LOGFILE
+    $COMPOSE run --rm certbot certonly \
+        --standalone \
+        -d $DOMAIN \
+        -d www.$DOMAIN \
+        -d refuel.$DOMAIN \
+        --email $LETSENCRYPT_EMAIL \
+        --agree-tos \
+        --no-eff-email || {
+            echo "❌ Failed to obtain SSL certificate!" | tee -a $LOGFILE
+            exit 1
+        }
+else
+    echo "✔ Certificate exists. Attempting renewal..." | tee -a $LOGFILE
+    $COMPOSE run --rm certbot renew --non-interactive || \
+        echo "⚠ SSL renewal failed or rate-limited, continuing..." | tee -a $LOGFILE
+fi
 
 ############################################
 # RELOAD NGINX
