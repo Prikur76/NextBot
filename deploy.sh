@@ -169,8 +169,6 @@ if [ ! -f "$CERT_PATH" ]; then
     $COMPOSE run --rm certbot certonly \
         --standalone \
         -d $DOMAIN \
-        -d www.$DOMAIN \
-        -d refuel.$DOMAIN \
         --email $LETSENCRYPT_EMAIL \
         --agree-tos \
         --no-eff-email || {
