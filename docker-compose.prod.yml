@@ -83,7 +83,7 @@ services:
       echo 'Scheduler starting...';
       while true; do
         echo '[Scheduler] Running sync...';
-        python manage.py sync_cars_with_element;
+        python manage.py sync_cars_with_element || echo '[ERROR] Command failed but continuing...';
         echo '[Scheduler] Sleeping for 5 minutes...';
         sleep 300;
       done
