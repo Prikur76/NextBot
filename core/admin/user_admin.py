@@ -39,7 +39,7 @@ class UserAdmin(DjangoUserAdmin):
         return qs
 
     # --- метод для отображения групп в таблице ---
-    @admin.display(description="Роль", admin_order_field="first_group_name")
+    @admin.display(description="Роль", ordering="first_group_name")
     def get_groups(self, obj):
         return ", ".join(obj.groups.values_list("name", flat=True)) or "—"
     
