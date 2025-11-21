@@ -121,5 +121,26 @@ LOGGING = {
             "level": "INFO",
             "propagate": False,
         },
+        
+        # Подавление подробных логов httpx
+        "httpx": {
+            "handlers": ["file_errors"],  # Только ошибки попадут в errors.log
+            "level": "WARNING",           # Игнорируем INFO (POST, GET и т.п.)
+            "propagate": False,
+        },
+
+        # Опционально: если используете httpcore (нижний уровень httpx)
+        "httpcore": {
+            "handlers": [],
+            "level": "WARNING",
+            "propagate": False,
+        },
+
+        # Опционально: подавить логи urllib3 (если используется requests)
+        "urllib3": {
+            "handlers": [],
+            "level": "WARNING",
+            "propagate": False,
+        },
     },
 }
