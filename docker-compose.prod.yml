@@ -62,6 +62,7 @@ services:
         condition: service_healthy
     command: python manage.py runbot
     restart: unless-stopped
+    user: "1000:1000"
     volumes:
       - ./logs:/app/logs
       - ./local_secrets:/app/local_secrets:ro
@@ -89,6 +90,7 @@ services:
       done
       "
     restart: unless-stopped
+    user: "1000:1000"
     volumes:
       - ./logs:/app/logs
       - ./local_secrets:/app/local_secrets:ro
