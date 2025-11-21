@@ -87,8 +87,8 @@ class ElementCarClient:
         activity = car_data.get("Activity", True)
         status = str(car_data.get("Status") or "")
         is_archived = not activity or status.upper() == "АРХИВ"
-        if is_archived:
-            logger.info(f"📦 Пропущен архивный автомобиль: {car_data.get('Number')} (Status: {status})")
+        # if is_archived:
+        #     logger.info(f"📦 Пропущен архивный автомобиль: {car_data.get('Number')} (Status: {status})")
         return is_archived
 
     @staticmethod
