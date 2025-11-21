@@ -4,6 +4,7 @@ from asgiref.sync import async_to_sync
 from django.contrib import admin, messages
 from django.http import HttpRequest, HttpResponseRedirect
 from django.urls import path
+from django.utils import timezone
 from django.utils.html import format_html
 
 from core.admin.actions import export_action
@@ -146,7 +147,12 @@ class FuelRecordAdmin(admin.ModelAdmin):
     
     @admin.display(description="Дата заправки", ordering="filled_at")
     def filled_at_formatted(self, obj):
-        return obj.filled_at.strftime("%d.%m.%Y %H:%M")
+        if obj.filled_at:
+            # переводим UTC в локальный часовой пояс (TIME_ZONE)
+            local_dt = timezone.localtime(obj.filled_at)
+            # форматируем с отображением TZ
+            return local_dt.strftime("%d.%m.%Y %H:%M (%Z)")
+        return "-"
     
     @admin.display(description="Статус", boolean=True)
     def approved_display(self, obj):
