@@ -6,32 +6,40 @@ from core.models import User
 
 @admin.register(User)
 class UserAdmin(DjangoUserAdmin):
+
     list_display = (
-        "username", "get_full_name", 
-        "phone", "telegram_id", 
-        "region", "zone", "get_groups",
-        "is_active", "is_staff",
-        
+        "username",
+        "get_full_name",
+        "phone",
+        "telegram_id",
+        "region",
+        "zone",
+        "get_groups",
+        "is_active",
+        "is_staff",
     )
-    list_filter = ("is_active", "zone", "region", "groups")
-    search_fields = ("username", "telegram_id", "first_name", "last_name")
-    filter_horizontal = ("groups", "user_permissions")
-    fieldsets = (
-        (None, {"fields": ("username", "password")}),
-        ("Персональные данные", {"fields": ("first_name", "last_name", "phone", "telegram_id", "region", "zone")}),
-        ("Права доступа", {"fields": ("is_active", "is_staff", "is_superuser", "groups", "user_permissions")}),
-    )
-    list_per_page = 30
-    ordering = ("region", "username", )
-    
-    @admin.display(description="ФИО")
-    def get_full_name(self, obj):
-        if obj.first_name and obj.last_name:
-            return f"{obj.first_name} {obj.last_name}"
-        return obj.username
-    
-    @admin.display(description="Группы")
+
+    # --- главное: переопределяем queryset ---
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+
+        # сортируем по первой найденной группе (если несколько — берём минимальную по алфавиту)
+        from django.db.models import Subquery, OuterRef
+
+        # подзапрос для выборки имени первой группы пользователя
+        first_group = (
+            User.groups.through.objects
+            .filter(user_id=OuterRef("pk"))
+            .order_by("group__name")
+            .values("group__name")[:1]
+        )
+
+        # добавляем аннотированное поле group_name
+        qs = qs.annotate(first_group_name=Subquery(first_group))
+        return qs
+
+    # --- метод для отображения групп в таблице ---
+    @admin.display(description="Роль", admin_order_field="first_group_name")
     def get_groups(self, obj):
         return ", ".join(obj.groups.values_list("name", flat=True)) or "—"
-
     
