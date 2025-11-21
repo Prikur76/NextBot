@@ -382,5 +382,6 @@ class CarAdmin(admin.ModelAdmin):
                 del actions['archive_selected']
             if 'activate_selected' in actions:
                 del actions['activate_selected']
-            del actions['delete_selected']
+            if actions and 'delete_selected' in actions:
+                del actions['delete_selected']
         return actions
