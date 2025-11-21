@@ -126,6 +126,13 @@ echo "🗄 Applying migrations..." | tee -a $LOGFILE
 $COMPOSE exec web python manage.py migrate --noinput
 
 ############################################
+# CREATE SUPERUSER
+############################################
+echo ""
+echo "👤 Creating superuser (if needed)..." | tee -a $LOGFILE
+$COMPOSE exec web python manage.py create_superuser || true
+
+############################################
 # COLLECT STATIC FILES
 ############################################
 echo ""
@@ -163,11 +170,11 @@ echo "🔐 Checking / obtaining SSL certificates..." | tee -a $LOGFILE
 
 CERT_PATH="/etc/letsencrypt/live/$DOMAIN/fullchain.pem"
 
-# Если сертификата нет, выдаём первый раз
 if [ ! -f "$CERT_PATH" ]; then
     echo "⚠ Certificate not found. Issuing a new one via certbot..." | tee -a $LOGFILE
     $COMPOSE run --rm certbot certonly \
-        --standalone \
+        --webroot \
+        -w /var/www/certbot \
         -d $DOMAIN \
         --email $LETSENCRYPT_EMAIL \
         --agree-tos \
@@ -177,7 +184,7 @@ if [ ! -f "$CERT_PATH" ]; then
         }
 else
     echo "✔ Certificate exists. Attempting renewal..." | tee -a $LOGFILE
-    $COMPOSE run --rm certbot renew --non-interactive || \
+    $COMPOSE run --rm certbot renew --webroot -w /var/www/certbot --non-interactive || \
         echo "⚠ SSL renewal failed or rate-limited, continuing..." | tee -a $LOGFILE
 fi
 
