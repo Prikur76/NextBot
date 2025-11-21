@@ -27,6 +27,8 @@ ALLOWED_HOSTS = env.list(
 
 # Apps
 INSTALLED_APPS = [
+    "core",
+    
     "django.contrib.admin",
     "django.contrib.auth",
     "django.contrib.contenttypes",
@@ -36,9 +38,7 @@ INSTALLED_APPS = [
 
     # Third party
     "ninja",
-
     # Local
-    "core",
 ]
 
 AUTH_USER_MODEL = "core.User"
