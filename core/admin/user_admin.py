@@ -9,7 +9,7 @@ class UserAdmin(DjangoUserAdmin):
     list_display = (
         "username", "get_full_name", 
         "phone", "telegram_id", 
-        "region", "zone", "groups",
+        "region", "zone", "get_groups",
         "is_active", "is_staff",
         
     )
@@ -22,11 +22,16 @@ class UserAdmin(DjangoUserAdmin):
         ("Права доступа", {"fields": ("is_active", "is_staff", "is_superuser", "groups", "user_permissions")}),
     )
     list_per_page = 30
-    ordering = ("region", "username",)
+    ordering = ("region", "get_groups", "username", )
     
     @admin.display(description="ФИО")
     def get_full_name(self, obj):
         if obj.first_name and obj.last_name:
             return f"{obj.first_name} {obj.last_name}"
         return obj.username
+    
+    @admin.display(description="Группы")
+    def get_groups(self, obj):
+        return ", ".join(obj.groups.values_list("name", flat=True)) or "—"
+
     
