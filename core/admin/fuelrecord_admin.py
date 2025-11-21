@@ -1,6 +1,8 @@
+from collections import OrderedDict
+from typing import Any
 from asgiref.sync import async_to_sync
 from django.contrib import admin, messages
-from django.http import HttpResponseRedirect
+from django.http import HttpRequest, HttpResponseRedirect
 from django.urls import path
 from django.utils.html import format_html
 
@@ -434,4 +436,19 @@ class FuelRecordAdmin(admin.ModelAdmin):
             )
         
         return HttpResponseRedirect('../')
+    
+    def get_actions(self, request: HttpRequest) -> OrderedDict[Any, Any]:
+        actions = super().get_actions(request)
+        if actions and not request.user.has_perm('core.change_fuelrecord'):
+            if 'sync_to_google_sheets' in actions:
+                del actions['sync_to_google_sheets']
+            if 'mark_suspicious' in actions:
+                del actions['mark_suspicious']
+            if 'reject_selected' in actions:
+                del actions['reject_selected']
+            if 'approve_selected' in actions:
+                del actions['approve_selected']
+            if 'delete_selected' in actions:
+                del actions['delete_selected']
+        return actions
     
