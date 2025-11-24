@@ -30,8 +30,7 @@ trap rollback ERR
 # UPDATE CODE
 ############################################
 echo "🔄 Pulling latest code..." | tee -a $LOGFILE
-git fetch origin
-git reset --hard origin/main
+git fetch origin && git reset --hard origin/main
 
 ############################################
 # BUILD IMAGES
@@ -193,7 +192,7 @@ fi
 ############################################
 echo ""
 echo "🔄 Reloading nginx to apply certs..." | tee -a $LOGFILE
-$COMPOSE restart nginx
+$COMPOSE exec nginx nginx -s reload
 
 ############################################
 # DONE
