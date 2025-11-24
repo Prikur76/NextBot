@@ -23,9 +23,13 @@ CACHE_TTL = 60 * 15  # 15 минут
 def _fetch_user_data_sync(telegram_id: int) -> Dict[str, Any] | None:
     """
     Синхронная функция: загружает данные пользователя.
-    Возвращает словарь с примитивами (без ORM-объектов).
+    Перед запросом убеждается, что соединение с БД активно.
     """
+    from django import db
     try:
+        # Убедимся, что соединение живое
+        db.close_old_connections()
+
         user = (
             User.objects
             .select_related("zone", "region")
@@ -59,7 +63,7 @@ def _fetch_user_data_sync(telegram_id: int) -> Dict[str, Any] | None:
     except Exception as e:
         logger.exception("Ошибка при загрузке пользователя telegram_id=%s", telegram_id)
         return None
-
+    
 
 async def access_middleware(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """
