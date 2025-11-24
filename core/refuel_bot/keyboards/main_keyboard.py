@@ -24,7 +24,7 @@ class MainKeyboard:
 
         if role == "fueler":
             keyboard = [["⛽ Добавить", "❓ Помощь"],]
-        elif role in ("manager", "admin"):
+        elif role == "admin_or_manager":
             keyboard = [["⛽ Добавить"], ["📊 Отчёты", "❓ Помощь"]]
         else:
             keyboard = [["❓ Помощь"]]
