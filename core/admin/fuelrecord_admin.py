@@ -48,8 +48,8 @@ class FuelRecordAdmin(admin.ModelAdmin):
         "id", "filled_at_formatted", 
         "car_display", "fuel_type_display", "liters", 
         "source_display",          
-        "historical_department_display", "historical_region_display", 
-        "employee_display", "approved_display", 
+        "historical_department_display", "historical_region_display",
+        "notes", "employee_display", "approved_display", 
     )
     list_filter = (
         "fuel_type", "source", "approved", "filled_at", "created_at",
