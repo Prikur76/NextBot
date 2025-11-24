@@ -16,14 +16,14 @@ logger = logging.getLogger(__name__)
 
 # Ключ кэша: bot_user:<telegram_id>
 CACHE_KEY_PREFIX = "bot_user:"
-# Время жизни кэша — 15 минут (настройте под себя)
+# Время жизни кэша — 15 минут
 CACHE_TTL = 60 * 15  # 15 минут
 
 
 def _fetch_user_data_sync(telegram_id: int) -> Dict[str, Any] | None:
     """
-    Синхронная функция: загружает данные пользователя и его группы.
-    Возвращает словарь, безопасный для кэширования.
+    Синхронная функция: загружает данные пользователя.
+    Возвращает словарь с примитивами (без ORM-объектов).
     """
     try:
         user = (
@@ -31,6 +31,12 @@ def _fetch_user_data_sync(telegram_id: int) -> Dict[str, Any] | None:
             .select_related("zone", "region")
             .prefetch_related("groups")
             .filter(telegram_id=telegram_id, is_active=True)
+            .only(
+                "id", "username", "first_name", "last_name",
+                "telegram_id", "is_active",
+                "zone__id", "zone__name",
+                "region__id", "region__name"
+            )
             .first()
         )
         if not user:
@@ -39,12 +45,14 @@ def _fetch_user_data_sync(telegram_id: int) -> Dict[str, Any] | None:
         return {
             "id": user.id,
             "telegram_id": user.telegram_id,
-            "username": user.username,
-            "first_name": user.first_name,
-            "last_name": user.last_name,
+            "username": user.username or "",
+            "first_name": user.first_name or "",
+            "last_name": user.last_name or "",
             "is_active": user.is_active,
-            "zone": user.zone,
-            "region": user.region,
+            "zone_id": user.zone.id if user.zone else None,
+            "zone_name": user.zone.name if user.zone else None,
+            "region_id": user.region.id if user.region else None,
+            "region_name": user.region.name if user.region else None,
             "group_names": list(user.groups.values_list("name", flat=True)),
             "fetched_at": dj_tz.now().isoformat(),
         }
@@ -55,12 +63,14 @@ def _fetch_user_data_sync(telegram_id: int) -> Dict[str, Any] | None:
 
 async def access_middleware(update: Update, context: ContextTypes.DEFAULT_TYPE) -> None:
     """
-    Подставляет Django User в context.user, если telegram_id соответствует активному пользователю.
-    Использует кэширование через django.core.cache для производительности.
-    Выполняется как TypeHandler на каждом update.
+    Подставляет в context.user упрощённый объект с данными пользователя.
+    Использует кэш для оптимизации.
     """
-    # Инициализация поля user
+    # Инициализация
     context.user = None
+    context.user_data.pop("user_id", None)
+    context.user_data.pop("telegram_id", None)
+    context.user_data.pop("group_names", None)
 
     tg_user = getattr(update, "effective_user", None)
     if not tg_user:
@@ -69,45 +79,67 @@ async def access_middleware(update: Update, context: ContextTypes.DEFAULT_TYPE) 
     telegram_id = tg_user.id
     cache_key = f"{CACHE_KEY_PREFIX}{telegram_id}"
 
-    # 1. Попробуем получить из кэша
-    user_data = cache.get(cache_key)
+    # Получаем из кэша
+    try:
+        user_data = cache.get(cache_key)
+    except Exception as e:
+        logger.warning("Cache GET failed for %s: %s", telegram_id, e)
+        user_data = None
 
-    # 2. Если нет в кэше — загружаем из БД
+    # Если нет — загружаем из БД
     if user_data is None:
         user_data = await sync_to_async(_fetch_user_data_sync, thread_sensitive=True)(telegram_id)
-
         if user_data is None:
             logger.warning("Пользователь не найден или неактивен: telegram_id=%s", telegram_id)
             return
 
-        # Сохраняем в кэш только если пользователь найден
-        cache.set(cache_key, user_data, timeout=CACHE_TTL)
+        # Сохраняем в кэш (если возможно)
+        try:
+            cache.set(cache_key, user_data, timeout=CACHE_TTL)
+        except Exception as e:
+            logger.warning("Cache SET failed for %s: %s", telegram_id, e)
 
-    # 3. Создаём "лёгкий" объект User (без связи с БД), чтобы не передавать ORM-объект
-    # Это важно, потому что ORM-объекты нельзя передавать между потоками
-    class MockUser:
+    # Сохраняем ID и группу в контекст
+    context.user_data["telegram_id"] = telegram_id
+    context.user_data["user_id"] = user_data["id"]
+    context.user_data["group_names"] = user_data["group_names"]
+
+    # Создаём лёгкий объект пользователя
+    class SimpleUser:
         def __init__(self, data):
             self.id = data["id"]
             self.telegram_id = data["telegram_id"]
             self.username = data["username"]
             self.first_name = data["first_name"]
             self.last_name = data["last_name"]
-            self.is_active = data["is_active"]
-            self.zone_id = data["zone_id"]
-            self.region_id = data["region_id"]
-            self.group_names = data["group_names"]
+            self.group_names = set(data["group_names"])
+            self.is_superuser = data["id"] and ("Администратор" in self.group_names)
+            self.is_staff = self.is_superuser or "Менеджер" in self.group_names
 
-        def get_full_name(self):
-            return f"{self.first_name or ''} {self.last_name or ''}".strip() or self.username
+        def get_full_name(self) -> str:
+            full_name = f"{self.first_name.strip()} {self.last_name.strip()}".strip()
+            return full_name or self.username or f"User{self.telegram_id}"
 
-        def groups_filter(self, name: str) -> bool:
+        def has_group(self, name: str) -> bool:
             return name in self.group_names
 
-    # 4. Привязываем к контексту
-    try:
-        context.user = MockUser(user_data)
-    except Exception:
-        # Резервный вариант, если context не позволяет установить user
-        context.user_data["_django_user"] = MockUser(user_data)
+        @property
+        def groups(self):
+            """Эмуляция RelatedManager для совместимости с user.groups.filter(...).exists()"""
+            class MockGroups:
+                def filter(self, name=None):
+                    return self if name and name in self._names else MockGroups()
 
-    logger.debug("Пользователь загружен в контекст: %s (%s)", context.user.get_full_name(), telegram_id)
+                def exists(self):
+                    return len(self._names) > 0
+
+            mock = MockGroups()
+            mock._names = self.group_names
+            return mock
+
+    # Привязываем к context.user
+    try:
+        context.user = SimpleUser(user_data)
+    except Exception as e:
+        logger.exception("Не удалось создать SimpleUser для telegram_id=%s", telegram_id)
+        context.user = None
