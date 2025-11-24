@@ -49,6 +49,16 @@ services:
       - ./certbot/www:/var/www/certbot
       - /etc/letsencrypt:/etc/letsencrypt
 
+  redis:
+    image: redis:7-alpine
+    container_name: nextbot_redis_prod
+    restart: unless-stopped
+    expose:
+      - "6379"
+    volumes:
+      - redis_data:/data
+    command: ["redis-server", "--appendonly", "yes"]
+
   bot:
     build:
       context: .
@@ -67,7 +77,6 @@ services:
       - ./logs:/app/logs
       - ./local_secrets:/app/local_secrets:ro
     
-
   scheduler:
     build:
       context: .
@@ -98,5 +107,6 @@ services:
 volumes:
   static_volume:
   media_volume:
+  redis_data:
   local_secrets:
   logs:
