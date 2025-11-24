@@ -125,18 +125,12 @@ async def access_middleware(update: Update, context: ContextTypes.DEFAULT_TYPE) 
 
         @property
         def groups(self):
-            """Эмуляция RelatedManager для совместимости с user.groups.filter(...).exists()"""
-            class MockGroups:
-                def filter(self, name=None):
-                    return self if name and name in self._names else MockGroups()
-
-                def exists(self):
-                    return len(self._names) > 0
-
-            mock = MockGroups()
-            mock._names = self.group_names
-            return mock
-
+            group_names = self.group_names
+            return type('MockGroups', (), {
+                'filter': lambda self, name=None: self if name and name in group_names else None,
+                'exists': lambda self: bool(group_names)
+            })()
+            
     # Привязываем к context.user
     try:
         context.user = SimpleUser(user_data)
