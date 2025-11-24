@@ -85,8 +85,8 @@ services:
       while true; do
         echo '[Scheduler] Running sync...';
         python manage.py sync_cars_with_element || echo '[ERROR] Command failed but continuing...';
-        echo '[Scheduler] Sleeping for 5 minutes...';
-        sleep 300;
+        echo '[Scheduler] Sleeping for 60 minutes...';
+        sleep 3600;
       done
       "
     restart: unless-stopped
