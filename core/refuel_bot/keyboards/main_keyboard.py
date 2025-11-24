@@ -10,29 +10,22 @@ class MainKeyboard:
     @sync_to_async
     def _get_role(user):
         if user is None:
-            return 'anon'
-        if user.is_superuser or user.groups.filter(name="Администратор").exists():
-            return 'admin'
-        if user.groups.filter(name="Менеджер").exists():
-            return 'manager'
-        if user.groups.filter(name="Заправщик").exists():
-            return 'fueler'
-        return 'other'
+            return "anon"
+
+        if user.is_superuser or user.is_manager:
+            return "admin_or_manager"
+        if user.is_fueler:
+            return "fueler"
+        return "other"
 
     @staticmethod
     async def get_for_user(user=None):
-        role = await MainKeyboard._get_role(user) if user else 'anon'
+        role = await MainKeyboard._get_role(user) if user else "anon"
 
-        if role == 'fueler':
-            keyboard = [
-                ["⛽ Добавить"],
-                ["❓ Помощь"],
-            ]
-        elif role in ('manager', 'admin'):
-            keyboard = [
-                ["⛽ Добавить"], 
-                ["📊 Отчёты", "❓ Помощь"]
-            ]
+        if role == "fueler":
+            keyboard = [["⛽ Добавить", "❓ Помощь"],]
+        elif role in ("manager", "admin"):
+            keyboard = [["⛽ Добавить"], ["📊 Отчёты", "❓ Помощь"]]
         else:
             keyboard = [["❓ Помощь"]]
 

@@ -113,23 +113,16 @@ async def access_middleware(update: Update, context: ContextTypes.DEFAULT_TYPE) 
             self.first_name = data["first_name"]
             self.last_name = data["last_name"]
             self.group_names = set(data["group_names"])
-            self.is_superuser = data["id"] and ("Администратор" in self.group_names)
-            self.is_staff = self.is_superuser or "Менеджер" in self.group_names
+            self.is_superuser = "Администратор" in self.group_names
+            self.is_manager = "Менеджер" in self.group_names
+            self.is_fueler = "Заправщик" in self.group_names
 
         def get_full_name(self) -> str:
-            full_name = f"{self.first_name.strip()} {self.last_name.strip()}".strip()
+            full_name = f"{self.first_name or ''} {self.last_name or ''}".strip()
             return full_name or self.username or f"User{self.telegram_id}"
 
         def has_group(self, name: str) -> bool:
             return name in self.group_names
-
-        @property
-        def groups(self):
-            group_names = self.group_names
-            return type('MockGroups', (), {
-                'filter': lambda self, name=None: self if name and name in group_names else None,
-                'exists': lambda self: bool(group_names)
-            })()
             
     # Привязываем к context.user
     try:

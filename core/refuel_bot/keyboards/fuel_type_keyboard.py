@@ -9,9 +9,5 @@ class FuelTypeKeyboard:
                 InlineKeyboardButton("Бензин", callback_data="fuel_type:GASOLINE"),
                 InlineKeyboardButton("Дизель", callback_data="fuel_type:DIESEL"),
             ],
-            [
-                InlineKeyboardButton("🔙 Назад", callback_data="fuel_type:back"),
-                InlineKeyboardButton("❌ Отмена", callback_data="fuel_type:cancel"),
-            ]
         ]
         return InlineKeyboardMarkup(keyboard)
