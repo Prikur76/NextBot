@@ -40,7 +40,7 @@ class CarAdmin(admin.ModelAdmin):
     )
     list_filter = (
         CarArchiveFilter,
-        "is_active", "region", "department", 
+        "is_active", "model", "status", "region", "department", 
         "manufacture_year", "created_at"
     )
     search_fields = (
