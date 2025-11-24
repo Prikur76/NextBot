@@ -30,8 +30,6 @@ logger = logging.getLogger(__name__)
 
 # States
 WAITING_CAR, WAITING_LITERS, WAITING_REFUEL_METHOD, WAITING_FUEL_TYPE = range(4)
-
-
 # Экземпляры клавиатур
 cancel_kb = CancelKeyboard()
 refuel_kb = RefuelMethodKeyboard()
@@ -55,13 +53,19 @@ def get_car_by_id(cid: int):
 
 @sync_to_async
 def create_fuel_record(
-    *, car_id: int, user_id: int, liters: Decimal, fuel_type: str, 
+    *, car_id: int, user_id: int, liters: Decimal, fuel_type: str,
     source: str, filled_at, approved: bool, notes: str = ""):
-    """Использует кастомный QuerySet для сохранения с историческими данными."""
-    car = Car.objects.filter(id=car_id).first()
+    """Создаёт запись о заправке, безопасно загружая объекты из БД."""
     from django.contrib.auth import get_user_model
     User = get_user_model()
-    employee = User.objects.filter(id=user_id).first()        
+
+    try:
+        car = Car.objects.get(id=car_id)
+        employee = User.objects.get(id=user_id)
+    except (Car.DoesNotExist, User.DoesNotExist) as e:
+        logger.error(f"Car or User not found: {e}")
+        raise ValueError("Car or User not found")
+
     return FuelRecord.objects.create_fuel_record(
         car=car,
         employee=employee,
@@ -214,7 +218,7 @@ async def process_refuel_method(update: Update, context: ContextTypes.DEFAULT_TY
         is_cb = False
 
     # ----- Отмена -----
-    if (is_cb and data.endswith(":cancel")) or (not is_cb and data == "❌ Отмена"):
+    if (is_cb and data.endswith(":cancel")) or (not is_cb and data == "❌ отмена"):
         if is_cb:
             try:
                 await query.message.delete()
@@ -232,7 +236,7 @@ async def process_refuel_method(update: Update, context: ContextTypes.DEFAULT_TY
         return ConversationHandler.END
 
     # ----- Назад -----
-    if (is_cb and data.endswith(":back")) or (not is_cb and data == "🔙 Назад"):
+    if (is_cb and data.endswith(":back")) or (not is_cb and data == "🔙 назад"):
         if is_cb:
             try:
                 await query.message.delete()
@@ -300,6 +304,13 @@ async def process_refuel_method(update: Update, context: ContextTypes.DEFAULT_TY
     context.user_data["source_name"] = method_name
     push_state(context, WAITING_REFUEL_METHOD)
 
+    # ----- УДАЛЯЕМ сообщение с выбором способа -----
+    if is_cb:
+        try:
+            await query.message.delete()
+        except Exception as e:
+            logger.warning("Не удалось удалить сообщение с выбором способа: %s", e)
+
     # Переход к выбору типа топлива
     msg = await update.effective_chat.send_message(
         "Выберите тип топлива:",
@@ -319,16 +330,22 @@ async def process_fuel_type(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if query:
         await query.answer()
         data = query.data or ""
+        is_cb = True
     else:
-        await query.edit_message_text("Пожалуйста, используйте кнопки.", reply_markup=fuel_type_kb.get_inline())
-        return WAITING_FUEL_TYPE
+        data = (update.message.text or "").strip().lower()
+        is_cb = False
 
     # ----- Отмена -----
-    if data == "fuel_type:cancel":
-        try:
-            await query.message.delete()
-        except Exception:
-            pass
+    if (is_cb and data.endswith(":cancel")) or (not is_cb and data == "❌ отмена"):
+        if is_cb:
+            try:
+                await query.message.delete()
+            except Exception:
+                pass
+        else:
+            await try_delete_user_message(update)
+            await delete_last_bot_message(update, context)
+
         context.user_data.clear()
         await update.effective_chat.send_message(
             "Ввод отменён.",
@@ -337,12 +354,31 @@ async def process_fuel_type(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return ConversationHandler.END
 
     # ----- Назад -----
-    if data == "fuel_type:back":
-        try:
-            await query.message.delete()
-        except Exception:
-            pass
+    if (is_cb and data.endswith(":back")) or (not is_cb and data == "🔙 назад"):
+        if is_cb:
+            try:
+                await query.message.delete()
+            except Exception:
+                pass
+        else:
+            await try_delete_user_message(update)
+            await delete_last_bot_message(update, context)
+
         prev = pop_state(context)
+        if prev == WAITING_CAR:
+            msg = await update.effective_chat.send_message(
+                "Возврат к вводу госномера. Введите госномер:",
+                reply_markup=cancel_kb.get()
+            )
+            remember_bot_message(context, msg)
+            return WAITING_CAR
+        if prev == WAITING_LITERS:
+            msg = await update.effective_chat.send_message(
+                "Возврат к вводу литров. Введите количество литров:",
+                reply_markup=cancel_kb.get()
+            )
+            remember_bot_message(context, msg)
+            return WAITING_LITERS
         if prev == WAITING_REFUEL_METHOD:
             msg = await update.effective_chat.send_message(
                 "Возврат к выбору способа заправки:",
@@ -350,6 +386,7 @@ async def process_fuel_type(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             remember_bot_message(context, msg)
             return WAITING_REFUEL_METHOD
+
         await update.effective_chat.send_message(
             "Возвращаю в меню.",
             reply_markup=(await main_kb.get_for_user(user))
@@ -363,7 +400,14 @@ async def process_fuel_type(update: Update, context: ContextTypes.DEFAULT_TYPE):
     }
 
     if data not in FUEL_MAP:
-        await query.edit_message_reply_markup(reply_markup=fuel_type_kb.get_inline())
+        if is_cb:
+            await query.edit_message_reply_markup(reply_markup=fuel_type_kb.get_inline())
+        else:
+            msg = await update.message.reply_text(
+                "Выберите тип топлива.",
+                reply_markup=fuel_type_kb.get_inline()
+            )
+            remember_bot_message(context, msg)
         return WAITING_FUEL_TYPE
 
     fuel_key, fuel_name = FUEL_MAP[data]
@@ -375,9 +419,13 @@ async def process_fuel_type(update: Update, context: ContextTypes.DEFAULT_TYPE):
     car_id = context.user_data.get("car_id")
     liters = context.user_data.get("liters")
     source = context.user_data.get("source")
-    
+
     if not all([user_id, car_id, liters, source]):
-        await query.edit_message_text("Ошибка данных — начните заново.")
+        if is_cb:
+            await query.edit_message_text("Ошибка данных — начните заново.")
+        else:
+            msg = await update.message.reply_text("Ошибка данных — начните заново.")
+            remember_bot_message(context, msg)
         context.user_data.clear()
         return ConversationHandler.END
 
@@ -395,7 +443,10 @@ async def process_fuel_type(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
     except Exception as e:
         logger.exception("Ошибка при создании записи о заправке")
-        await query.edit_message_text("❌ Ошибка сохранения. Попробуйте позже.")
+        if is_cb:
+            await query.edit_message_text("❌ Ошибка сохранения. Попробуйте позже.")
+        else:
+            await update.message.reply_text("❌ Ошибка сохранения. Попробуйте позже.")
         return ConversationHandler.END
 
     # ----- Ответ пользователю -----
@@ -407,7 +458,10 @@ async def process_fuel_type(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"📅 {dj_tz.now().strftime('%d.%m.%Y %H:%M')}"
     )
 
-    await query.edit_message_text(success_text)
+    if is_cb:
+        await query.edit_message_text(success_text)
+    else:
+        await update.message.reply_text(success_text)
 
     await update.effective_chat.send_message(
         "Возвращаю в меню.",
@@ -454,6 +508,19 @@ async def back_from_liters(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return WAITING_CAR
 
 
+async def back_from_refuel_method(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Обработка кнопки 'Назад' при выборе типа топлива"""
+    await try_delete_user_message(update)
+    await delete_last_bot_message(update, context)
+
+    msg = await update.effective_chat.send_message(
+        "Возврат к выбору способа заправки:",
+        reply_markup=refuel_kb.get_inline()
+    )
+    remember_bot_message(context, msg)
+    return WAITING_REFUEL_METHOD
+
+
 # --- Conversation Handler ---
 fuel_conv_handler = ConversationHandler(
     entry_points=[MessageHandler(filters.Regex("^⛽ Добавить$"), start_fuel_input)],
@@ -473,7 +540,9 @@ fuel_conv_handler = ConversationHandler(
             MessageHandler(filters.TEXT & ~filters.COMMAND, process_refuel_method)
         ],
         WAITING_FUEL_TYPE: [
-            CallbackQueryHandler(process_fuel_type, pattern="^fuel_type:")
+            CallbackQueryHandler(process_fuel_type, pattern="^fuel_type:"),
+            MessageHandler(filters.Regex("^🔙 Назад$"), back_from_refuel_method),
+            MessageHandler(filters.TEXT & ~filters.COMMAND, process_fuel_type)
         ]
     },
     fallbacks=[
@@ -488,7 +557,6 @@ fuel_conv_handler = ConversationHandler(
 
 
 # --- Команда /fuel ---
-# /fuel <госномер> <литры> <способ> [тип_топлива]
 async def fuel_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = getattr(context, "user", None)
     if not user:
@@ -510,26 +578,25 @@ async def fuel_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     # Парсим аргументы
     state_plate = args[0]
     liters_text = args[1]
-    
     method_raw = args[2].lower() if len(args) > 2 else "tg-bot"
     fuel_type_raw = args[3].upper() if len(args) > 3 else None
 
-    # --- Валидация литров ---
+    # Валидация литров
     try:
         liters = Decimal(liters_text.replace(",", "."))
         if liters <= 0 or liters > 2000:
             raise InvalidOperation
     except (InvalidOperation, ValueError):
-        await update.message.reply_text("❌ Неверный формат литров. Введите число (например: 45.5).")
+        await update.message.reply_text("❌ Неверный формат литров.")
         return
 
-    # --- Поиск автомобиля ---
+    # Поиск автомобиля
     car = await find_car_by_state_number(state_plate)
     if not car:
         await update.message.reply_text("🚗 Автомобиль не найден.")
         return
 
-    # --- Определение способа заправки (source) ---
+    # Определение способа
     SOURCE_MAP = {
         "tg-bot": "TGBOT",
         "card": "CARD",
@@ -541,28 +608,19 @@ async def fuel_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await update.message.reply_text(f"❌ Неизвестный способ. Доступные: {available}")
         return
 
-    source_display = dict(FuelRecord.SourceFuel.choices)[source_key]
-
-    # --- Определение типа топлива ---
-    # Используем переданный тип или значение по умолчанию
-    valid_fuel_types = {k: v for k, v in FuelRecord.FuelType.choices}
-    
-    if fuel_type_raw is None:
-        fuel_type = "GASOLINE"  # Значение по умолчанию
-    elif fuel_type_raw not in valid_fuel_types:
-        available_fuels = ", ".join(valid_fuel_types.keys())
-        await update.message.reply_text(f"❌ Неверный тип топлива. Доступные: {available_fuels}")
+    # Определение типа топлива
+    valid_fuel_types = dict(FuelRecord.FuelType.choices)
+    fuel_type = fuel_type_raw or "GASOLINE"
+    if fuel_type not in valid_fuel_types:
+        available = ", ".join(valid_fuel_types.keys())
+        await update.message.reply_text(f"❌ Неверный тип топлива. Доступные: {available}")
         return
-    else:
-        fuel_type = fuel_type_raw
 
-    fuel_display = valid_fuel_types[fuel_type]
-
-    # --- Создание записи ---
+    # Создание записи
     try:
         await create_fuel_record(
-            car=car,
-            employee=user,
+            car_id=car.id,
+            user_id=user.id,
             liters=liters,
             fuel_type=fuel_type,
             source=source_key,
@@ -572,18 +630,13 @@ async def fuel_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
     except Exception as e:
         logger.exception("Ошибка при создании записи через /fuel")
-        await update.message.reply_text("❌ Ошибка сохранения. Попробуйте позже.")
+        await update.message.reply_text("❌ Ошибка сохранения.")
         return
 
-    # --- Ответ пользователю ---
-    success_text = (
-        f"✅ Заправка сохранена:\n"
-        f"🚗 {car.state_number}\n"
-        f"⛽ {liters.quantize(Decimal('0.01'))} л, {fuel_display}\n"
-        f"🔧 Способ: {source_display}"
+    fuel_display = valid_fuel_types[fuel_type]
+    await update.message.reply_text(
+        f"✅ Заправка: {car.state_number} — {liters:.1f} л, {fuel_display}"
     )
-    await update.message.reply_text(success_text)
 
 
-# --- Регистрация хендлера ---
 fuel_command_handler = CommandHandler("fuel", fuel_command)
