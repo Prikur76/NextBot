@@ -214,7 +214,7 @@ async def process_refuel_method(update: Update, context: ContextTypes.DEFAULT_TY
         is_cb = False
 
     # ----- Отмена -----
-    if (is_cb and data.endswith(":cancel")) or (not is_cb and data == "❌ отмена"):
+    if (is_cb and data.endswith(":cancel")) or (not is_cb and data == "❌ Отмена"):
         if is_cb:
             try:
                 await query.message.delete()
@@ -232,7 +232,7 @@ async def process_refuel_method(update: Update, context: ContextTypes.DEFAULT_TY
         return ConversationHandler.END
 
     # ----- Назад -----
-    if (is_cb and data.endswith(":back")) or (not is_cb and data == "🔙 назад"):
+    if (is_cb and data.endswith(":back")) or (not is_cb and data == "🔙 Назад"):
         if is_cb:
             try:
                 await query.message.delete()
