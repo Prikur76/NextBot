@@ -30,3 +30,11 @@ CSRF_COOKIE_SECURE = False
 SECURE_HSTS_SECONDS = 0
 SECURE_PROXY_SSL_HEADER = None
 USE_X_FORWARDED_HOST = False
+
+# Use local cache in dev
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.locmem.LocMemCache',
+        'LOCATION': 'unique-nextbot',
+    }
+}

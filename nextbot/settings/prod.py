@@ -54,3 +54,12 @@ LOGGING["root"]["level"] = "INFO"
 # Admin emails must be explicitly set
 if not ADMINS:
     raise RuntimeError("ADMINS is empty — set DJANGO_SUPERUSER_* env vars")
+
+
+# Caching
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+        'LOCATION': 'redis://127.0.0.1:6379/1',
+    }
+}

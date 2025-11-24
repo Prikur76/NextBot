@@ -152,11 +152,3 @@ SECURE_HSTS_PRELOAD = env.bool("SECURE_HSTS_PRELOAD", False)
 SECURE_PROXY_SSL_HEADER = None
 USE_X_FORWARDED_HOST = False
 USE_X_FORWARDED_PORT = False
-
-# Caching
-CACHES = {
-    'default': {
-        'BACKEND': 'django.core.cache.backends.redis.RedisCache',
-        'LOCATION': 'redis://127.0.0.1:6379/1',
-    }
-}
