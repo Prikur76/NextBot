@@ -36,6 +36,8 @@ INSTALLED_APPS = [
 
     # Third party
     "ninja",
+    "phonenumber_field",
+    
     # Local
     "core",
 ]
@@ -55,7 +57,7 @@ MIDDLEWARE = [
 
 ROOT_URLCONF = "nextbot.urls"
 ASGI_APPLICATION = "nextbot.asgi.application"
-WSGI_APPLICATION = "nextbot.wsgi.application"
+# WSGI_APPLICATION = "nextbot.wsgi.application"
 
 TEMPLATES = [
     {
@@ -79,6 +81,9 @@ TIME_ZONE = env.str("TIME_ZONE", "Europe/Moscow")
 USE_I18N = True
 USE_TZ = True
 
+# Default phone number region
+PHONENUMBER_DEFAULT_REGION = "RU"
+PHONENUMBER_DEFAULT_FORMAT = "INTERNATIONAL"
 
 # Static & Media
 STATICFILES_STORAGE = "django.contrib.staticfiles.storage.ManifestStaticFilesStorage"
@@ -147,3 +152,11 @@ SECURE_HSTS_PRELOAD = env.bool("SECURE_HSTS_PRELOAD", False)
 SECURE_PROXY_SSL_HEADER = None
 USE_X_FORWARDED_HOST = False
 USE_X_FORWARDED_PORT = False
+
+# Caching
+CACHES = {
+    'default': {
+        'BACKEND': 'django.core.cache.backends.redis.RedisCache',
+        'LOCATION': 'redis://127.0.0.1:6379/1',
+    }
+}

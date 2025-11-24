@@ -23,4 +23,6 @@ dependencies = [
     "gunicorn>=21.2.0",
     "uvicorn[standard]>=0.30.0",
     "psycopg2-binary>=2.9.11",
+    "django-phonenumber-field[phonenumberslite]>=8.3.0",
+    "redis>=7.1.0",
 ]

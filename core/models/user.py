@@ -1,5 +1,6 @@
 from django.db import models, transaction
 from django.contrib.auth.models import AbstractUser, Group, Permission, UserManager as DjangoUserManager
+from phonenumber_field.modelfields import PhoneNumberField
 
 # -----------------------
 # Кастомный QuerySet
@@ -88,8 +89,7 @@ class User(AbstractUser):
         null=True,
         verbose_name="Фамилия"
     )
-    phone = models.CharField(
-        max_length=20,
+    phone = PhoneNumberField(
         blank=True,
         null=True,
         verbose_name="Телефон"
