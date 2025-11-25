@@ -77,9 +77,9 @@ TEMPLATES = [
 
 # Internationalization
 LANGUAGE_CODE = "ru-RU"
-TIME_ZONE = env.str("TIME_ZONE", "Europe/Moscow")
 USE_I18N = True
 USE_TZ = True
+TIME_ZONE = env.str("TIME_ZONE", default="Europe/Moscow")
 
 # Default phone number region
 PHONENUMBER_DEFAULT_REGION = "RU"
