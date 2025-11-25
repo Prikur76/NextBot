@@ -143,7 +143,9 @@ async def start_fuel_input(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 
 async def process_car_number(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    raw_text = update.message.text or ""
+    if not update.effective_message or not update.effective_message.text:
+        return ConversationHandler.END
+    raw_text = update.effective_message.text or ""
     plate = normalize_plate_input(raw_text)
 
     if not is_valid_plate(plate):
@@ -178,7 +180,9 @@ async def process_car_number(update: Update, context: ContextTypes.DEFAULT_TYPE)
 
 
 async def process_liters(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    text = update.message.text.replace(",", ".").strip()
+    if not update.effective_message or not update.effective_message.text:
+        return ConversationHandler.END
+    text = update.effective_message.text.replace(",", ".").strip()
     try:
         liters = Decimal(text)
         if liters <= 0 or liters > 330:
@@ -214,7 +218,9 @@ async def process_refuel_method(update: Update, context: ContextTypes.DEFAULT_TY
         data = query.data or ""
         is_cb = True
     else:
-        data = (update.message.text or "").strip().lower()
+        if not update.effective_message or not update.effective_message.text:
+            return WAITING_REFUEL_METHOD
+        data = update.effective_message.text.strip().lower()
         is_cb = False
 
     # ----- Отмена -----
@@ -321,6 +327,8 @@ async def process_refuel_method(update: Update, context: ContextTypes.DEFAULT_TY
 
 
 async def process_fuel_type(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not update.effective_message or not update.effective_message.text:
+        return ConversationHandler.END
     user = getattr(context, "user", None)
     if not user:
         await update.message.reply_text("⛔ Сессия истекла.")
@@ -332,14 +340,15 @@ async def process_fuel_type(update: Update, context: ContextTypes.DEFAULT_TYPE):
         data = query.data or ""
         is_cb = True
     else:
-        data = (update.message.text or "").strip().lower()
+        data = (update.effective_message.text or "").strip().lower()
         is_cb = False
 
     # ----- Отмена -----
     if (is_cb and data.endswith(":cancel")) or (not is_cb and data == "❌ отмена"):
         if is_cb:
             try:
-                await query.message.delete()
+                if query and query.message:
+                    await query.message.delete()
             except Exception:
                 pass
         else:

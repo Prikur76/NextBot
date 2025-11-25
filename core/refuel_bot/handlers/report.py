@@ -48,7 +48,7 @@ def kb_reports_filters():
 def is_manager_or_admin(user):
     if not user:
         return False
-    return user.is_superuser or user.groups.filter(name__in=["Менеджер", "Администратор"]).exists()
+    return user.is_superuser or any(g in {"Менеджер", "Администратор"} for g in user.group_names)
 
 
 # ===== Агрегаторы =====
