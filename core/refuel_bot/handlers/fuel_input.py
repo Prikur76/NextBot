@@ -458,13 +458,15 @@ async def process_fuel_type(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text("❌ Ошибка сохранения. Попробуйте позже.")
         return ConversationHandler.END
 
+    local_dt = dj_tz.localtime(dj_tz.now())
+    
     # ----- Ответ пользователю -----
     success_text = (
         f"✅ Заправка сохранена:\n"
         f"🚗 {context.user_data['car_display']}\n"
         f"⛽ {liters.quantize(Decimal('0.01'))} л, {fuel_name}\n"
         f"🔧 Способ: {context.user_data['source_name']}\n"
-        f"📅 {dj_tz.now().strftime('%d.%m.%Y %H:%M')}"
+        f"📅 {local_dt.strftime('%d.%m.%Y %H:%M')}"
     )
 
     if is_cb:
