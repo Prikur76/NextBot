@@ -225,7 +225,7 @@ class FuelRecordAdmin(admin.ModelAdmin):
             ),
             path(
                 'export-fuel-report/',
-                self.admin_site.admin_view(self.export_fuel_report),
+                self.admin_site.admin_view(self.export_fuel_report_view),
                 name='export_fuel_report'
             ),
             path(
@@ -366,12 +366,12 @@ class FuelRecordAdmin(admin.ModelAdmin):
         
         return HttpResponseRedirect('../')
     
-    @export_action(
-        export_method='export_fuel_records_data',
-        filename_prefix='fuel_report',
-        description='📊 Экспорт отчета о заправках'
-    )
-    def export_fuel_report(self, request):
+    # @export_action(
+    #     export_method='export_fuel_records_data',
+    #     filename_prefix='fuel_report',
+    #     description='📊 Экспорт отчета о заправках'
+    # )
+    def export_fuel_report_view(self, request):
         """Экспорт отчета по заправкам"""
         response = ExportService.export_fuel_records_data('xlsx')
         
